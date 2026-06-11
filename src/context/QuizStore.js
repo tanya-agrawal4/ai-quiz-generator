@@ -13,21 +13,24 @@ const SAMPLE_QUIZZES = [
         prompt: 'What hook is used to manage local component state?',
         options: ['useEffect', 'useState', 'useMemo', 'useRef'],
         correctIndex: 1,
-        explanation: 'useState returns a state value and a setter function for functional components.',
+        explanation:
+          'useState returns a state value and a setter function for functional components.',
       },
       {
         id: 'q2',
         prompt: 'Which lifecycle concern does useEffect primarily address?',
         options: ['Styling', 'Side effects', 'Routing', 'Memoization'],
         correctIndex: 1,
-        explanation: 'useEffect runs after render to synchronize components with external systems.',
+        explanation:
+          'useEffect runs after render to synchronize components with external systems.',
       },
       {
         id: 'q3',
         prompt: 'What does JSX compile into?',
         options: ['HTML strings', 'React.createElement calls', 'Web Components', 'Templates'],
         correctIndex: 1,
-        explanation: 'JSX is syntactic sugar that transpiles to React.createElement invocations.',
+        explanation:
+          'JSX is syntactic sugar that transpiles to React.createElement invocations.',
       },
     ],
   },
@@ -41,6 +44,24 @@ const SAMPLE_ATTEMPTS = [
     total: 3,
     completedAt: '2026-05-29T14:20:00.000Z',
     answers: { q1: 1, q2: 1, q3: 0 },
+    violations: [],
+  },
+  {
+    id: 'a2',
+    quizId: 'quiz-react-basics',
+    score: 3,
+    total: 3,
+    completedAt: '2026-06-01T09:10:00.000Z',
+    answers: { q1: 1, q2: 1, q3: 1 },
+    violations: [],
+  },
+  {
+    id: 'a3',
+    quizId: 'quiz-react-basics',
+    score: 1,
+    total: 3,
+    completedAt: '2026-06-03T18:45:00.000Z',
+    answers: { q1: 1, q2: 0, q3: 2 },
     violations: [],
   },
 ]
@@ -71,7 +92,10 @@ function normalizeQuestion(raw, index) {
 
 function buildQuizFromPayload({ title, topic, difficulty, questions }) {
   const normalized = (questions || []).map(normalizeQuestion).filter((q) => q.prompt.length > 0)
-  if (normalized.length === 0) throw new Error('At least one valid question is required.')
+
+  if (normalized.length === 0) {
+    throw new Error('At least one valid question is required.')
+  }
 
   return {
     id: uid('quiz'),
@@ -83,108 +107,86 @@ function buildQuizFromPayload({ title, topic, difficulty, questions }) {
   }
 }
 
-// 1. SMART TEXT PARSER: Detects custom options and custom answers (* or correct marks)
 function parseRawTextToQuestions(text) {
-  const blocks = text.split(/\n\s*\n/).map((block) => block.trim()).filter(Boolean)
+  const blocks = text
+    .split(/\n\s*\n/)
+    .map((block) => block.trim())
+    .filter(Boolean)
 
   return blocks.map((block, blockIndex) => {
     const lines = block.split('\n').map((line) => line.trim()).filter(Boolean)
     const prompt = lines[0] || `Question ${blockIndex + 1}`
-    
-    let options = []
-    let correctIndex = 0
-
-    const rawOptions = lines.slice(1).filter(line => /^[A-Da-d1-4][.)\s]/.test(line) || line.startsWith('-') || line.startsWith('*'))
-
-    if (rawOptions.length >= 2) {
-      rawOptions.forEach((line, index) => {
-        // Checking if this specific line is marked as correct by ending with (*) or starting with *
-        const isMarkedCorrect = line.includes('(*)') || line.startsWith('*')
-        const cleanOption = line
-          .replace(/^[A-Da-d1-4][.)]\s*/, '') // Remove prefixes like A), B., 1.
-          .replace(/^\*\s*/, '')              // Remove leading asterisk
-          .replace(/\s*\(\*\)$/, '')         // Remove trailing (*)
-          .trim()
-        
-        options.push(cleanOption)
-        if (isMarkedCorrect) correctIndex = index
-      })
-    } else {
-      // Fallback dynamic pool generation so answers don't match on missing inputs
-      options = ['Option Alpha', 'Option Beta', 'Option Gamma', 'Option Delta']
-      correctIndex = blockIndex % 4 
-    }
+    const options = lines
+      .slice(1)
+      .map((line) => line.replace(/^[A-Da-d][.)]\s*/, '').trim())
+      .filter(Boolean)
 
     return normalizeQuestion(
       {
         prompt,
-        options,
-        correctIndex,
-        explanation: `Verified answer token tracked from source line content block ${blockIndex + 1}.`,
+        options: options.length >= 2 ? options : ['True', 'False', 'Maybe', 'Unknown'],
+        correctIndex: 0,
+        explanation: `Generated from raw text block ${blockIndex + 1}.`,
       },
       blockIndex,
     )
   })
 }
 
-// 2. DYNAMIC CODE PARSER: Creates varied questions mapping syntax usecases instead of repeats
 function parseCodeToQuestions(code) {
-  const keywords = [...new Set(code.match(/\b[A-Za-z_][A-Za-z0-9_]{2,}\b/g) || [])].slice(0, 15)
-  if (keywords.length === 0) throw new Error('Could not extract meaningful identifiers from the code snippet.')
+  const keywords = [...new Set(code.match(/\b[A-Za-z_][A-Za-z0-9_]{2,}\b/g) || [])].slice(0, 8)
 
-  const templates = [
-    (kw) => ({ prompt: `What is the primary role of "${kw}" inside this codebase?`, options: ['State variable / Reference identifier', 'Global API window property', 'Build configuration script tool', 'Styling Layout definition style'], correct: 0 }),
-    (kw) => ({ prompt: `If "${kw}" is modified or removed unexpectedly, what execution context breaks?`, options: ['The active runtime evaluation scope', 'Development local server environments only', 'Static asset styling rules', 'Network fetch interception requests'], correct: 0 }),
-    (kw) => ({ prompt: `Which programming paradigm is directly represented by the keyword symbol "${kw}"?`, options: ['Functional / Component state logic encapsulation', 'Low level direct assembly mapping', 'Relational database schema structure', 'Asynchronous service worker background pipeline'], correct: 0 }),
-    (kw) => ({ prompt: `Identify the scope allocation type most associated with "${kw}":`, options: ['Local functional module references', 'Browser native microtask event loops', 'Global runtime macro-queue definitions', 'Serverless cloud engine configurations'], correct: 0 })
-  ]
+  if (keywords.length === 0) {
+    throw new Error('Could not extract meaningful identifiers from the code snippet.')
+  }
 
-  return keywords.map((keyword, index) => {
-    const templateSelector = templates[index % templates.length]
-    const data = templateSelector(keyword)
-
-    // Dynamic shuffling of option layout array index positioning to break hardcoded 0 loops
-    const initialOptions = [...data.options]
-    const targetedTargetIndex = (index + 2) % 4
-    
-    // Swap the correct value with target index to make option positions completely random
-    const temp = initialOptions[0]
-    initialOptions[0] = initialOptions[targetedTargetIndex]
-    initialOptions[targetedTargetIndex] = temp
-
-    return normalizeQuestion({
-      prompt: data.prompt,
-      options: initialOptions,
-      correctIndex: targetedTargetIndex,
-      explanation: `Analyzed symbolic keyword context wrapper sequence token matching parameter index ${index + 1}.`
-    }, index)
-  })
+  return keywords.slice(0, 5).map((keyword, index) =>
+    normalizeQuestion(
+      {
+        prompt: `In the provided code context, what best describes "${keyword}"?`,
+        options: [
+          'A core implementation detail',
+          'An unused symbol',
+          'A syntax error',
+          'A CSS class name',
+        ],
+        correctIndex: 0,
+        explanation: `"${keyword}" appears in your snippet and likely represents an important symbol.`,
+      },
+      index,
+    ),
+  )
 }
 
 function parseJsonToQuestions(jsonText) {
   let parsed
-  try { parsed = JSON.parse(jsonText) } catch {
+  try {
+    parsed = JSON.parse(jsonText)
+  } catch {
     throw new Error('Invalid JSON. Provide an array of question objects or a quiz object.')
   }
+
   const questions = Array.isArray(parsed) ? parsed : parsed.questions
-  if (!Array.isArray(questions)) throw new Error('JSON must contain a questions array.')
+  if (!Array.isArray(questions)) {
+    throw new Error('JSON must contain a questions array.')
+  }
+
   return questions.map(normalizeQuestion)
 }
 
 function buildAiExplanation(question, selectedIndex) {
   const selected = question.options[selectedIndex]
   const correct = question.options[question.correctIndex]
-  return selectedIndex === question.correctIndex
-    ? `Correct. "${correct}" is the right answer because ${question.explanation}`
-    : `You selected "${selected ?? 'nothing'}", but the correct answer is "${correct}". ${question.explanation}`
+  const isCorrect = selectedIndex === question.correctIndex
+
+  if (isCorrect) {
+    return `Correct. "${correct}" is the right answer because ${question.explanation}`
+  }
+
+  return `You selected "${selected ?? 'nothing'}", but the correct answer is "${correct}". ${question.explanation}`
 }
 
 export const useQuizStore = create((set, get) => ({
-  user: {
-    name: 'Anjali Singh',
-    email: 'anjali@school.com',
-    isLoggedIn: true,
-  },
   activeView: 'dashboard',
   quizzes: SAMPLE_QUIZZES,
   attempts: SAMPLE_ATTEMPTS,
@@ -201,13 +203,17 @@ export const useQuizStore = create((set, get) => ({
     code: '',
     json: '',
     activeTab: 'raw',
-    questionCount: 5,
   },
 
-  loginUser: (userData) => set({ user: { ...userData, isLoggedIn: true } }),
-  logoutUser: () => set({ user: { name: 'Guest', email: 'guest@quizforge.com', isLoggedIn: false }, activeView: 'dashboard' }),
-  setView: (view) => { if (VIEWS.includes(view)) set({ activeView: view }) },
-  updateCreatorDraft: (patch) => set((state) => ({ creatorDraft: { ...state.creatorDraft, ...patch } })),
+  setView: (view) => {
+    if (!VIEWS.includes(view)) return
+    set({ activeView: view })
+  },
+
+  updateCreatorDraft: (patch) =>
+    set((state) => ({
+      creatorDraft: { ...state.creatorDraft, ...patch },
+    })),
 
   generateQuizFromCreator: () => {
     const { creatorDraft } = get()
@@ -221,94 +227,237 @@ export const useQuizStore = create((set, get) => ({
       questions = parseJsonToQuestions(creatorDraft.json)
     }
 
-    const desiredCount = parseInt(creatorDraft.questionCount) || questions.length
-    const limitedQuestions = questions.slice(0, desiredCount)
-
     const quiz = buildQuizFromPayload({
       title: creatorDraft.title,
       topic: creatorDraft.topic,
       difficulty: creatorDraft.difficulty,
-      questions: limitedQuestions,
+      questions,
     })
 
     set((state) => ({
       quizzes: [quiz, ...state.quizzes],
       activeQuizId: quiz.id,
       activeView: 'quiz',
-      session: { quizId: quiz.id, startedAt: new Date().toISOString(), currentIndex: 0, answers: {}, violations: [], finished: false },
+      session: {
+        quizId: quiz.id,
+        startedAt: new Date().toISOString(),
+        currentIndex: 0,
+        answers: {},
+        violations: [],
+        finished: false,
+      },
     }))
+
+    return quiz
+  },
+
+  importQuizFromJson: (jsonText) => {
+    const questions = parseJsonToQuestions(jsonText)
+    const quiz = buildQuizFromPayload({ title: 'Imported Quiz', questions })
+    set((state) => ({ quizzes: [quiz, ...state.quizzes] }))
     return quiz
   },
 
   startQuiz: (quizId) => {
     const quiz = get().quizzes.find((item) => item.id === quizId)
     if (!quiz) return
+
     set({
-      activeQuizId: quizId, activeView: 'quiz',
-      session: { quizId, startedAt: new Date().toISOString(), currentIndex: 0, answers: {}, violations: [], finished: false }
+      activeQuizId: quizId,
+      activeView: 'quiz',
+      session: {
+        quizId,
+        startedAt: new Date().toISOString(),
+        currentIndex: 0,
+        answers: {},
+        violations: [],
+        finished: false,
+      },
     })
   },
+
   selectAnswer: (questionId, optionIndex) => {
     const { session } = get()
     if (!session || session.finished) return
-    set({ session: { ...session, answers: { ...session.answers, [questionId]: optionIndex } } })
+
+    set({
+      session: {
+        ...session,
+        answers: { ...session.answers, [questionId]: optionIndex },
+      },
+    })
   },
+
   goToQuestion: (index) => {
     const { session, quizzes, activeQuizId } = get()
     if (!session) return
+
     const quiz = quizzes.find((item) => item.id === activeQuizId)
     if (!quiz) return
-    set({ session: { ...session, currentIndex: Math.min(Math.max(index, 0), quiz.questions.length - 1) } })
+
+    const safeIndex = Math.min(Math.max(index, 0), quiz.questions.length - 1)
+    set({ session: { ...session, currentIndex: safeIndex } })
   },
-  nextQuestion: () => { const { session, goToQuestion } = get(); if (session) goToQuestion(session.currentIndex + 1) },
-  previousQuestion: () => { const { session, goToQuestion } = get(); if (session) goToQuestion(session.currentIndex - 1) },
+
+  nextQuestion: () => {
+    const { session, goToQuestion } = get()
+    if (!session) return
+    goToQuestion(session.currentIndex + 1)
+  },
+
+  previousQuestion: () => {
+    const { session, goToQuestion } = get()
+    if (!session) return
+    goToQuestion(session.currentIndex - 1)
+  },
+
   recordViolation: (type, detail = '') => {
     const { session } = get()
     if (!session || session.finished) return
-    set({ session: { ...session, violations: [...session.violations, { id: uid('violation'), type, detail, at: new Date().toISOString() }] } })
+
+    const violation = {
+      id: uid('violation'),
+      type,
+      detail,
+      at: new Date().toISOString(),
+    }
+
+    set({
+      session: {
+        ...session,
+        violations: [...session.violations, violation],
+      },
+    })
   },
+
   finishQuiz: () => {
     const { session, quizzes } = get()
     if (!session) return
+
     const quiz = quizzes.find((item) => item.id === session.quizId)
     if (!quiz) return
+
     let score = 0
-    quiz.questions.forEach((q) => { if (session.answers[q.id] === q.correctIndex) score += 1 })
-    const attempt = { id: uid('attempt'), quizId: quiz.id, score, total: quiz.questions.length, completedAt: new Date().toISOString(), answers: session.answers, violations: session.violations }
+    quiz.questions.forEach((question) => {
+      if (session.answers[question.id] === question.correctIndex) score += 1
+    })
+
+    const attempt = {
+      id: uid('attempt'),
+      quizId: quiz.id,
+      score,
+      total: quiz.questions.length,
+      completedAt: new Date().toISOString(),
+      answers: session.answers,
+      violations: session.violations,
+    }
+
+    const flashcards = quiz.questions.map((question) => ({
+      id: uid('card'),
+      front: question.prompt,
+      back: question.options[question.correctIndex],
+      mastered: session.answers[question.id] === question.correctIndex,
+    }))
+
     set((state) => ({
-      attempts: [attempt, ...state.attempts], reviewAttemptId: attempt.id, session: { ...session, finished: true },
-      flashcards: quiz.questions.map((q) => ({ id: uid('card'), front: q.prompt, back: q.options[q.correctIndex], mastered: session.answers[q.id] === q.correctIndex })),
+      attempts: [attempt, ...state.attempts],
+      reviewAttemptId: attempt.id,
+      session: { ...session, finished: true },
+      flashcards,
       activeView: 'review',
     }))
   },
-  openReview: (attemptId) => set({ reviewAttemptId: attemptId, activeView: 'review' }),
+
+  openReview: (attemptId) => {
+    set({ reviewAttemptId: attemptId, activeView: 'review' })
+  },
+
   explainWithAi: async (questionId) => {
     const { quizzes, reviewAttemptId, attempts, aiExplanations } = get()
     const attempt = attempts.find((item) => item.id === reviewAttemptId)
-    const quiz = quizzes.find((item) => item.id === attempt?.quizId)
+    if (!attempt) return
+
+    const quiz = quizzes.find((item) => item.id === attempt.quizId)
     const question = quiz?.questions.find((item) => item.id === questionId)
-    if (!question || !attempt) return
+    if (!question) return
+
     const cacheKey = `${attempt.id}:${questionId}`
     if (aiExplanations[cacheKey]) return aiExplanations[cacheKey]
-    await new Promise((res) => setTimeout(res, 650))
-    const exp = buildAiExplanation(question, attempt.answers[questionId])
-    set({ aiExplanations: { ...aiExplanations, [cacheKey]: exp } })
-    return exp
+
+    await new Promise((resolve) => setTimeout(resolve, 650))
+
+    const explanation = buildAiExplanation(question, attempt.answers[questionId])
+    set({
+      aiExplanations: {
+        ...aiExplanations,
+        [cacheKey]: explanation,
+      },
+    })
+
+    return explanation
   },
-  toggleFlashcardMastered: (id) => set((s) => ({ flashcards: s.flashcards.map((c) => c.id === id ? { ...c, mastered: !c.mastered } : c) })),
-  getActiveQuiz: () => get().quizzes.find((q) => q.id === get().activeQuizId) || null,
-  getReviewAttempt: () => get().attempts.find((a) => a.id === get().reviewAttemptId) || null,
+
+  toggleFlashcardMastered: (cardId) => {
+    set((state) => ({
+      flashcards: state.flashcards.map((card) =>
+        card.id === cardId ? { ...card, mastered: !card.mastered } : card,
+      ),
+    }))
+  },
+
+  getActiveQuiz: () => {
+    const { quizzes, activeQuizId } = get()
+    return quizzes.find((quiz) => quiz.id === activeQuizId) || null
+  },
+
+  getReviewAttempt: () => {
+    const { attempts, reviewAttemptId } = get()
+    return attempts.find((attempt) => attempt.id === reviewAttemptId) || null
+  },
+
   getDashboardStats: () => {
     const { attempts, quizzes } = get()
     const totalAttempts = attempts.length
-    const averageScore = totalAttempts === 0 ? 0 : Math.round(attempts.reduce((s, a) => s + (a.score / a.total) * 100, 0) / totalAttempts)
-    const chartData = [...attempts].reverse().slice(-8).map((a, i) => ({ name: `Attempt ${i + 1}`, score: Math.round((a.score / a.total) * 100), topic: quizzes.find((q) => q.id === a.quizId)?.topic || 'General' }))
+    const averageScore =
+      totalAttempts === 0
+        ? 0
+        : Math.round(
+            attempts.reduce((sum, attempt) => sum + (attempt.score / attempt.total) * 100, 0) /
+              totalAttempts,
+          )
+
+    const chartData = [...attempts]
+      .reverse()
+      .slice(-8)
+      .map((attempt, index) => {
+        const quiz = quizzes.find((item) => item.id === attempt.quizId)
+        return {
+          name: `Attempt ${index + 1}`,
+          score: Math.round((attempt.score / attempt.total) * 100),
+          topic: quiz?.topic || 'General',
+        }
+      })
+
     const topicMap = {}
-    attempts.forEach((a) => {
-      const t = quizzes.find((q) => q.id === a.quizId)?.topic || 'General'
-      if (!topicMap[t]) topicMap[t] = { attempts: 0, totalPercent: 0 }
-      topicMap[t].attempts += 1; topicMap[t].totalPercent += (a.score / a.total) * 100
+    attempts.forEach((attempt) => {
+      const quiz = quizzes.find((item) => item.id === attempt.quizId)
+      const topic = quiz?.topic || 'General'
+      if (!topicMap[topic]) topicMap[topic] = { attempts: 0, totalPercent: 0 }
+      topicMap[topic].attempts += 1
+      topicMap[topic].totalPercent += (attempt.score / attempt.total) * 100
     })
-    return { totalQuizzes: quizzes.length, totalAttempts, averageScore, chartData, topicData: Object.entries(topicMap).map(([topic, v]) => ({ topic, average: Math.round(v.totalPercent / v.attempts) })) }
+
+    const topicData = Object.entries(topicMap).map(([topic, value]) => ({
+      topic,
+      average: Math.round(value.totalPercent / value.attempts),
+    }))
+
+    return {
+      totalQuizzes: quizzes.length,
+      totalAttempts,
+      averageScore,
+      chartData,
+      topicData,
+    }
   },
 }))

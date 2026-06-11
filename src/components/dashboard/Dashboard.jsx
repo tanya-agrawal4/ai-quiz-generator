@@ -6,16 +6,16 @@ import {
   Line,
   LineChart,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
+  Tooltip,
 } from 'recharts'
 import { BookOpen, Target, TrendingUp } from 'lucide-react'
 import { useQuizStore } from '../../context/QuizStore'
 
 function StatCard({ icon: Icon, label, value, hint }) {
   return (
-    <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+    <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm text-left">
       <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent">
         <Icon className="h-5 w-5" />
       </div>
@@ -31,20 +31,28 @@ export default function Dashboard() {
   const attempts = useQuizStore((state) => state.attempts)
   const startQuiz = useQuizStore((state) => state.startQuiz)
   const openReview = useQuizStore((state) => state.openReview)
+  
+  // Real dynamic user state pull kiya taaki middle me bada sa show ho sake
+  const user = useQuizStore((state) => state.user)
+
   const stats = useMemo(
     () => useQuizStore.getState().getDashboardStats(),
     [quizzes, attempts],
   )
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-6 text-left">
+      {/* Middle Content View me Bada Dynamic Welcome Message Header */}
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">Dashboard</h1>
-        <p className="mt-2 text-subtle">
-          Track performance, launch quizzes, and review recent attempts.
+        <h1 className="text-4xl font-bold tracking-tight text-ink">
+          Welcome, {user?.name || 'Tanya'}! 👋
+        </h1>
+        <p className="mt-2 text-base text-subtle">
+          Here is your custom AI quiz generator analytics overview for today.
         </p>
       </div>
 
+      {/* Stats Cards Section */}
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard
           icon={BookOpen}
@@ -66,6 +74,7 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* Charts Section */}
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-ink">Score Trend</h2>
@@ -112,6 +121,7 @@ export default function Dashboard() {
         </section>
       </div>
 
+      {/* Lists Section */}
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-ink">Quiz Library</h2>
@@ -130,7 +140,7 @@ export default function Dashboard() {
                 <button
                   type="button"
                   onClick={() => startQuiz(quiz.id)}
-                  className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-indigo-600"
+                  className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-indigo-600 transition"
                 >
                   Start
                 </button>
@@ -159,7 +169,7 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => openReview(attempt.id)}
-                    className="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-ink hover:bg-muted"
+                    className="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-ink hover:bg-muted transition"
                   >
                     Review
                   </button>

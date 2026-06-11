@@ -5,6 +5,8 @@ import {
   ClipboardCheck,
   Layers3,
   Sparkles,
+  LogOut,
+  User,
 } from 'lucide-react'
 import { useQuizStore } from '../../context/QuizStore'
 
@@ -21,8 +23,13 @@ export default function Sidebar() {
   const setView = useQuizStore((state) => state.setView)
   const totalQuizzes = useQuizStore((state) => state.quizzes.length)
 
+  // Real dynamic user data aur logout function direct Zustand store se
+  const user = useQuizStore((state) => state.user)
+  const logoutUser = useQuizStore((state) => state.logoutUser)
+
   return (
     <aside className="flex h-full w-72 shrink-0 flex-col border-r border-border bg-surface px-5 py-6">
+      {/* Brand Header */}
       <div className="mb-8 flex items-center gap-3 px-2">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent">
           <Sparkles className="h-5 w-5" />
@@ -33,6 +40,7 @@ export default function Sidebar() {
         </div>
       </div>
 
+      {/* Navigation Links */}
       <nav className="space-y-1">
         {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
           const active = activeView === id
@@ -55,10 +63,40 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="mt-auto rounded-2xl border border-border bg-muted p-4 text-left">
-        <p className="text-xs font-medium uppercase tracking-wide text-subtle">Workspace</p>
-        <p className="mt-2 text-2xl font-semibold text-ink">{totalQuizzes}</p>
-        <p className="text-sm text-subtle">Quizzes in library</p>
+      {/* Workspace & Bottom User Section */}
+      <div className="mt-auto space-y-4">
+        {/* Workspace Card */}
+        <div className="rounded-2xl border border-border bg-muted p-4 text-left">
+          <p className="text-xs font-medium uppercase tracking-wide text-subtle">Workspace</p>
+          <p className="mt-1 text-2xl font-semibold text-ink">{totalQuizzes}</p>
+          <p className="text-sm text-subtle">Quizzes in library</p>
+        </div>
+
+        <hr className="border-border" />
+
+        {/* Left me ekdum neeche clean User Name, Mail aur Sign Out */}
+        <div className="flex flex-col gap-3 text-left px-1">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+              <User className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              {/* No more welcome text wrapper here, just clean details */}
+              <p className="truncate text-sm font-semibold text-ink">{user?.name || 'Tanya'}</p>
+              <p className="truncate text-xs text-subtle">{user?.email || 'tanya@example.com'}</p>
+            </div>
+          </div>
+
+          {/* Sign Out Button */}
+          <button
+            type="button"
+            onClick={logoutUser}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive-soft transition group"
+          >
+            <LogOut className="h-4 w-4 text-destructive group-hover:translate-x-0.5 transition-transform" />
+            Sign Out
+          </button>
+        </div>
       </div>
     </aside>
   )

@@ -66,7 +66,7 @@ const SAMPLE_ATTEMPTS = [
   },
 ]
 
-const VIEWS = ['dashboard', 'creator', 'quiz', 'review', 'flashcards']
+const VIEWS = ['landing', 'dashboard', 'creator', 'quiz', 'review', 'flashcards']
 
 function uid(prefix = 'id') {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`
@@ -187,7 +187,10 @@ function buildAiExplanation(question, selectedIndex) {
 }
 
 export const useQuizStore = create((set, get) => ({
-  activeView: 'dashboard',
+  activeView: 'landing', 
+  isAuthenticated: false,
+  userProfile: null,
+
   quizzes: SAMPLE_QUIZZES,
   attempts: SAMPLE_ATTEMPTS,
   activeQuizId: null,
@@ -215,6 +218,30 @@ export const useQuizStore = create((set, get) => ({
       creatorDraft: { ...state.creatorDraft, ...patch },
     })),
 
+  loginUser: (email, password) => {
+    if (email && password) {
+      set({
+        isAuthenticated: true,
+        activeView: 'dashboard',
+        userProfile: {
+          name: email.split('@')[0],
+          email: email
+        }
+      })
+      return true
+    }
+    return false
+  },
+
+  logoutUser: () => {
+    set({
+      isAuthenticated: false,
+      userProfile: null,
+      activeView: 'landing',
+      session: null
+    })
+  },
+
   generateQuizFromCreator: () => {
     const { creatorDraft } = get()
     let questions = []
@@ -223,8 +250,10 @@ export const useQuizStore = create((set, get) => ({
       questions = parseRawTextToQuestions(creatorDraft.rawText)
     } else if (creatorDraft.activeTab === 'code') {
       questions = parseCodeToQuestions(creatorDraft.code)
-    } else {
+    } else if (creatorDraft.activeTab === 'json') {
       questions = parseJsonToQuestions(creatorDraft.json)
+    } else if (creatorDraft.activeTab === 'pdf') {
+      questions = parseRawTextToQuestions(creatorDraft.rawText)
     }
 
     const quiz = buildQuizFromPayload({
@@ -458,6 +487,60 @@ export const useQuizStore = create((set, get) => ({
       averageScore,
       chartData,
       topicData,
+    }
+  },
+
+  // DYNAMIC EXTRA FEATURE LOOKUP WITH AUTOMATED TIMEOUT CHECKS
+  isParsingPdf: false,
+  extractTextFromPdf: async (file) => {
+    set({ isParsingPdf: true })
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+      
+      // Explicitly pull the window subsystem context
+      let pdfjs = window.pdfjsLib;
+      
+      // If network latency slowed down the script injection, wait 800ms and retry automatically
+      if (!pdfjs) {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        pdfjs = window.pdfjsLib;
+      }
+      
+      if (!pdfjs) {
+        throw new Error('CDN Script processing timed out. Please check your internet connection and refresh.')
+      }
+      
+      // Configure background worker threading safely using our window tracking variables
+      pdfjs.GlobalWorkerOptions.workerSrc = window.pdfjsLibWorkerUrl || 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+      
+      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise
+      let compiledText = ''
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i)
+        const textContent = await page.getTextContent()
+        const pageLines = textContent.items.map((item) => item.str).join(' ')
+        compiledText += pageLines + '\n'
+      }
+
+      const cleanText = compiledText.trim()
+      if (!cleanText) {
+        throw new Error('This PDF appears to be a scanned image or photo containing no selectable text vectors.')
+      }
+      
+      set((state) => ({
+        isParsingPdf: false,
+        creatorDraft: {
+          ...state.creatorDraft,
+          rawText: cleanText,
+        }
+      }))
+      return cleanText
+
+    } catch (error) {
+      set({ isParsingPdf: false })
+      console.error('PDF Processing Pipeline Fault:', error)
+      alert(`Parsing Issue: ${error.message || 'Unable to accurately extract structure.'}`)
     }
   },
 }))

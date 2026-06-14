@@ -6,7 +6,6 @@ import {
   Layers3,
   Sparkles,
   LogOut,
-  User,
 } from 'lucide-react'
 import { useQuizStore } from '../../context/QuizStore'
 
@@ -23,8 +22,8 @@ export default function Sidebar() {
   const setView = useQuizStore((state) => state.setView)
   const totalQuizzes = useQuizStore((state) => state.quizzes.length)
 
-  // Real dynamic user data aur logout function direct Zustand store se
-  const user = useQuizStore((state) => state.user)
+  // Swapped state.user to state.userProfile to match your exact Zustand schema fields
+  const userProfile = useQuizStore((state) => state.userProfile)
   const logoutUser = useQuizStore((state) => state.logoutUser)
 
   return (
@@ -74,20 +73,23 @@ export default function Sidebar() {
 
         <hr className="border-border" />
 
-        {/* Left me ekdum neeche clean User Name, Mail aur Sign Out */}
+        {/* Dynamic User Profile Block */}
         <div className="flex flex-col gap-3 text-left px-1">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
-              <User className="h-5 w-5" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent font-bold uppercase text-sm">
+              {userProfile?.name?.charAt(0) || 'T'}
             </div>
             <div className="min-w-0 flex-1">
-              {/* No more welcome text wrapper here, just clean details */}
-              <p className="truncate text-sm font-semibold text-ink">{user?.name || 'Tanya'}</p>
-              <p className="truncate text-xs text-subtle">{user?.email || 'tanya@example.com'}</p>
+              <p className="truncate text-sm font-semibold text-ink capitalize">
+                {userProfile?.name || 'Tanya'}
+              </p>
+              <p className="truncate text-xs text-subtle">
+                {userProfile?.email || 'tanya@example.com'}
+              </p>
             </div>
           </div>
 
-          {/* Sign Out Button */}
+          {/* Fully Functional Sign Out Operational Trigger */}
           <button
             type="button"
             onClick={logoutUser}

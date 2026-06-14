@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { Braces, Code2, FileText, Sparkles } from 'lucide-react'
+import { Braces, Code2, FileText, Sparkles, Upload } from 'lucide-react'
 import { useQuizStore } from '../../context/QuizStore'
 
+// Added PDF tab configuration to your original TABS structure
 const TABS = [
   { id: 'raw', label: 'Raw Text', icon: FileText },
   { id: 'code', label: 'Code', icon: Code2 },
   { id: 'json', label: 'JSON', icon: Braces },
+  { id: 'pdf', label: 'PDF Document', icon: FileText },
 ]
 
 const SAMPLE_JSON = `[
@@ -21,7 +23,13 @@ export default function QuizCreator() {
   const creatorDraft = useQuizStore((state) => state.creatorDraft)
   const updateCreatorDraft = useQuizStore((state) => state.updateCreatorDraft)
   const generateQuizFromCreator = useQuizStore((state) => state.generateQuizFromCreator)
+  
+  // Extra new states and operations from your updated store
+  const extractTextFromPdf = useQuizStore((state) => state.extractTextFromPdf)
+  const isParsingPdf = useQuizStore((state) => state.isParsingPdf)
+  
   const [error, setError] = useState('')
+  const [pdfSuccessMessage, setPdfSuccessMessage] = useState('')
 
   const handleGenerate = () => {
     try {
@@ -29,6 +37,26 @@ export default function QuizCreator() {
       generateQuizFromCreator()
     } catch (err) {
       setError(err.message || 'Unable to generate quiz.')
+    }
+  }
+
+  // Intercepts uploaded file buffer stream
+  const handlePdfFileSelection = async (event) => {
+    const file = event.target.files[0]
+    if (!file) return
+
+    if (file.type !== 'application/pdf') {
+      setError('Invalid file type. Please upload a standard PDF document.')
+      return
+    }
+
+    try {
+      setError('')
+      setPdfSuccessMessage('')
+      await extractTextFromPdf(file)
+      setPdfSuccessMessage(`Successfully extracted and synchronised data from "${file.name}" into context!`)
+    } catch (err) {
+      setError(err.message || 'Failed to successfully extract text from PDF.')
     }
   }
 
@@ -41,7 +69,7 @@ export default function QuizCreator() {
         </p>
       </div>
 
-      {/* Input Configuration Grid (Teacher Settings added here) */}
+      {/* Input Configuration Grid (Teacher Settings) */}
       <div className="grid gap-4 md:grid-cols-4">
         <label className="space-y-2">
           <span className="text-sm font-medium text-ink">Title</span>
@@ -144,6 +172,40 @@ export default function QuizCreator() {
               rows={14}
               className="w-full rounded-xl border border-border bg-muted px-4 py-3 font-mono text-sm outline-none ring-accent/20 focus:ring-4 text-ink"
             />
+          )}
+
+          {/* New Interactive PDF Upload Zone View Pane */}
+          {creatorDraft.activeTab === 'pdf' && (
+            <div className="w-full rounded-xl border border-dashed border-border bg-muted/50 px-4 py-12 flex flex-col items-center justify-center text-center min-h-[290px]">
+              {isParsingPdf ? (
+                <div className="flex flex-col items-center space-y-3 animate-pulse">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+                  <p className="text-sm font-medium text-accent">Extracting high-density document content...</p>
+                </div>
+              ) : (
+                <div className="space-y-4 max-w-md">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft text-accent">
+                    <Upload className="h-6 w-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-ink">Upload reference material file</p>
+                    <p className="text-xs text-subtle">Supports single or multi-page documentation PDFs</p>
+                  </div>
+                  <label className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-surface border border-border px-4 py-2.5 text-sm font-medium text-ink shadow-sm hover:bg-muted transition">
+                    <span>Select PDF File</span>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      className="hidden"
+                      onChange={handlePdfFileSelection}
+                    />
+                  </label>
+                  {pdfSuccessMessage && (
+                    <p className="text-xs font-medium text-green-600 mt-2">{pdfSuccessMessage}</p>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </section>

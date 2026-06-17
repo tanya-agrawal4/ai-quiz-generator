@@ -33,7 +33,7 @@ export default function Dashboard() {
   const openReview = useQuizStore((state) => state.openReview)
   
   // Real dynamic user state pull kiya taaki middle me bada sa show ho sake
-  const user = useQuizStore((state) => state.user)
+  const user = useQuizStore((state) => state.userProfile)
 
   const stats = useMemo(
     () => useQuizStore.getState().getDashboardStats(),

@@ -60,7 +60,11 @@ export default function QuizReview() {
       <div className="space-y-4">
         {quiz.questions.map((question, index) => {
           const selectedIndex = attempt.answers?.[question.id]
-          const isCorrect = selectedIndex === question.correctIndex
+          const isCorrect =
+            question.questionType === 'SHORT_ANSWER'
+              ? String(selectedIndex || '').trim().toLowerCase() ===
+                String(question.correctAnswer || '').trim().toLowerCase()
+              : selectedIndex === question.correctIndex
           const cacheKey = `${attempt.id}:${question.id}`
           const aiText = aiExplanations[cacheKey]
 
@@ -87,6 +91,8 @@ export default function QuizReview() {
                       <p className="mt-2 text-sm text-ink">
                         {selectedIndex == null
                           ? 'Not answered'
+                          : question.questionType === 'SHORT_ANSWER'
+                          ? selectedIndex
                           : question.options[selectedIndex]}
                       </p>
                     </div>
@@ -95,7 +101,9 @@ export default function QuizReview() {
                         Correct Answer
                       </p>
                       <p className="mt-2 text-sm text-ink">
-                        {question.options[question.correctIndex]}
+                        {question.questionType === 'SHORT_ANSWER'
+                          ? question.correctAnswer
+                          : question.options[question.correctIndex]}
                       </p>
                     </div>
                   </div>

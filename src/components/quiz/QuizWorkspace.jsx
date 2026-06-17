@@ -61,7 +61,14 @@ export default function QuizWorkspace() {
   )
 
   useEffect(() => {
+    if (isQuizRunning && session?.violations && session.violations.length >= 3) {
+      finishQuiz()
+    }
+  }, [session, isQuizRunning, finishQuiz])
+
+  useEffect(() => {
     if (!isQuizRunning) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSecureMode(false)
       setModalOpen(false)
     }
@@ -90,29 +97,31 @@ export default function QuizWorkspace() {
     const onVisibilityChange = () => {
       if (document.hidden) {
         recordViolation('tab-switch', 'The document became hidden during secure mode.')
-        // Relaxed for UI testing: log only, no forced modal or auto-submit.
-        // setModalOpen(true)
+        setModalOpen(true)
       }
     }
 
     const onContextMenu = (event) => {
       event.preventDefault()
       recordViolation('context-menu', 'Right-click context menu was blocked.')
-      // setModalOpen(true)
+      setModalOpen(true)
     }
 
-    // Window blur is noisy during normal devtools/UI testing — disabled for now.
-    // const onBlur = () => {
-    //   recordViolation('window-blur', 'Quiz window lost focus.')
-    //   setModalOpen(true)
-    // }
+    const onBlur = () => {
+      if (!document.hidden) {
+        recordViolation('window-blur', 'Quiz window lost focus.')
+        setModalOpen(true)
+      }
+    }
 
     document.addEventListener('visibilitychange', onVisibilityChange)
     document.addEventListener('contextmenu', onContextMenu)
+    window.addEventListener('blur', onBlur)
 
     return () => {
       document.removeEventListener('visibilitychange', onVisibilityChange)
       document.removeEventListener('contextmenu', onContextMenu)
+      window.removeEventListener('blur', onBlur)
     }
   }, [secureMode, isQuizRunning, recordViolation])
 
@@ -123,7 +132,7 @@ export default function QuizWorkspace() {
     const onFullscreenChange = () => {
       if (!document.fullscreenElement) {
         recordViolation('fullscreen-exit', 'Fullscreen mode was exited.')
-        // setModalOpen(true)
+        setModalOpen(true)
       }
     }
 
@@ -235,28 +244,43 @@ export default function QuizWorkspace() {
         <section className="rounded-2xl border border-border bg-surface p-8 shadow-sm">
           <h2 className="text-xl font-semibold leading-8 text-ink">{currentQuestion.prompt}</h2>
 
-          <div className="mt-6 grid gap-3">
-            {currentQuestion.options.map((option, index) => {
-              const selected = selectedIndex === index
-              return (
-                <button
-                  key={`${currentQuestion.id}-${index}`}
-                  type="button"
-                  onClick={() => selectAnswer(currentQuestion.id, index)}
-                  className={[
-                    'rounded-xl border px-4 py-4 text-left text-sm transition',
-                    selected
-                      ? 'border-accent bg-accent-soft text-accent'
-                      : 'border-border bg-muted text-ink hover:border-slate-300 hover:bg-surface',
-                  ].join(' ')}
-                >
-                  <span className="mr-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-xs font-semibold">
-                    {String.fromCharCode(65 + index)}
-                  </span>
-                  {option}
-                </button>
-              )
-            })}
+          <div className="mt-6">
+            {currentQuestion.questionType === 'SHORT_ANSWER' ? (
+              <label className="block space-y-2 text-left">
+                <span className="text-sm font-medium text-ink">Your Answer</span>
+                <input
+                  type="text"
+                  value={session.answers[currentQuestion.id] || ''}
+                  onChange={(event) => selectAnswer(currentQuestion.id, event.target.value)}
+                  placeholder="Type your answer here..."
+                  className="w-full rounded-xl border border-border bg-surface px-4 py-3.5 text-sm outline-none ring-accent/20 focus:ring-4 text-ink font-medium"
+                />
+              </label>
+            ) : (
+              <div className="grid gap-3">
+                {currentQuestion.options.map((option, index) => {
+                  const selected = selectedIndex === index
+                  return (
+                    <button
+                      key={`${currentQuestion.id}-${index}`}
+                      type="button"
+                      onClick={() => selectAnswer(currentQuestion.id, index)}
+                      className={[
+                        'rounded-xl border px-4 py-4 text-left text-sm transition',
+                        selected
+                          ? 'border-accent bg-accent-soft text-accent'
+                          : 'border-border bg-muted text-ink hover:border-slate-300 hover:bg-surface',
+                      ].join(' ')}
+                    >
+                      <span className="mr-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-xs font-semibold">
+                        {String.fromCharCode(65 + index)}
+                      </span>
+                      {option}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </section>
 
@@ -299,9 +323,8 @@ export default function QuizWorkspace() {
         violations={session.violations}
         onContinue={() => setModalOpen(false)}
         onSubmit={() => {
-          // Relaxed: dismiss modal without auto-submitting the quiz during UI testing.
           setModalOpen(false)
-          // finishQuiz()
+          finishQuiz()
         }}
       />
     </>

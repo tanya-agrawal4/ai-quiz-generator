@@ -73,12 +73,24 @@ function uid(prefix = 'id') {
 }
 
 function normalizeQuestion(raw, index) {
-  const options = Array.isArray(raw.options) ? raw.options.slice(0, 4) : []
-  while (options.length < 4) options.push(`Option ${options.length + 1}`)
+  const questionType = raw.questionType || 'MCQ'
+  
+  let options;
+  if (questionType === 'MCQ' || questionType === 'FILL_BLANK') {
+    options = Array.isArray(raw.options) ? raw.options.slice(0, 4) : []
+    while (options.length < 4) {
+      options.push(`Option ${options.length + 1}`)
+    }
+  } else if (questionType === 'TRUE_FALSE') {
+    options = Array.isArray(raw.options) && raw.options.length === 2 ? raw.options : ['True', 'False']
+  } else {
+    // SHORT_ANSWER
+    options = []
+  }
 
   const correctIndex =
     typeof raw.correctIndex === 'number'
-      ? Math.min(Math.max(raw.correctIndex, 0), options.length - 1)
+      ? Math.min(Math.max(raw.correctIndex, 0), Math.max(options.length - 1, 0))
       : 0
 
   return {
@@ -86,6 +98,8 @@ function normalizeQuestion(raw, index) {
     prompt: String(raw.prompt || raw.question || `Question ${index + 1}`).trim(),
     options,
     correctIndex,
+    questionType,
+    correctAnswer: raw.correctAnswer ? String(raw.correctAnswer).trim() : '',
     explanation: String(raw.explanation || 'No explanation provided yet.').trim(),
   }
 }
@@ -107,6 +121,7 @@ function buildQuizFromPayload({ title, topic, difficulty, questions }) {
   }
 }
 
+/* eslint-disable-next-line no-unused-vars */
 function parseRawTextToQuestions(text) {
   const blocks = text
     .split(/\n\s*\n/)
@@ -133,6 +148,7 @@ function parseRawTextToQuestions(text) {
   })
 }
 
+/* eslint-disable-next-line no-unused-vars */
 function parseCodeToQuestions(code) {
   const keywords = [...new Set(code.match(/\b[A-Za-z_][A-Za-z0-9_]{2,}\b/g) || [])].slice(0, 8)
 
@@ -175,9 +191,12 @@ function parseJsonToQuestions(jsonText) {
 }
 
 function buildAiExplanation(question, selectedIndex) {
-  const selected = question.options[selectedIndex]
-  const correct = question.options[question.correctIndex]
-  const isCorrect = selectedIndex === question.correctIndex
+  const isShort = question.questionType === 'SHORT_ANSWER'
+  const selected = isShort ? selectedIndex : question.options[selectedIndex]
+  const correct = isShort ? question.correctAnswer : question.options[question.correctIndex]
+  const isCorrect = isShort
+    ? String(selectedIndex || '').trim().toLowerCase() === String(question.correctAnswer || '').trim().toLowerCase()
+    : selectedIndex === question.correctIndex
 
   if (isCorrect) {
     return `Correct. "${correct}" is the right answer because ${question.explanation}`
@@ -186,18 +205,89 @@ function buildAiExplanation(question, selectedIndex) {
   return `You selected "${selected ?? 'nothing'}", but the correct answer is "${correct}". ${question.explanation}`
 }
 
-export const useQuizStore = create((set, get) => ({
-  activeView: 'landing', 
-  isAuthenticated: false,
-  userProfile: null,
+function loadUserData(email) {
+  const quizzesKey = `quiz_app:${email}:quizzes`
+  const attemptsKey = `quiz_app:${email}:attempts`
+  const flashcardsKey = `quiz_app:${email}:flashcards`
+  const explanationsKey = `quiz_app:${email}:aiExplanations`
 
-  quizzes: SAMPLE_QUIZZES,
-  attempts: SAMPLE_ATTEMPTS,
+  const storedQuizzes = localStorage.getItem(quizzesKey)
+  const storedAttempts = localStorage.getItem(attemptsKey)
+  const storedFlashcards = localStorage.getItem(flashcardsKey)
+  const storedExplanations = localStorage.getItem(explanationsKey)
+
+  return {
+    quizzes: storedQuizzes ? JSON.parse(storedQuizzes) : [],
+    attempts: storedAttempts ? JSON.parse(storedAttempts) : [],
+    flashcards: storedFlashcards ? JSON.parse(storedFlashcards) : [],
+    aiExplanations: storedExplanations ? JSON.parse(storedExplanations) : {},
+  }
+}
+
+function saveUserData(email, data) {
+  if (!email) return
+  if (data.quizzes !== undefined) {
+    localStorage.setItem(`quiz_app:${email}:quizzes`, JSON.stringify(data.quizzes))
+  }
+  if (data.attempts !== undefined) {
+    localStorage.setItem(`quiz_app:${email}:attempts`, JSON.stringify(data.attempts))
+  }
+  if (data.flashcards !== undefined) {
+    localStorage.setItem(`quiz_app:${email}:flashcards`, JSON.stringify(data.flashcards))
+  }
+  if (data.aiExplanations !== undefined) {
+    localStorage.setItem(`quiz_app:${email}:aiExplanations`, JSON.stringify(data.aiExplanations))
+  }
+}
+
+const getInitialState = () => {
+  const currentUserStr = localStorage.getItem('quiz_app:current_user')
+  if (currentUserStr) {
+    try {
+      const userProfile = JSON.parse(currentUserStr)
+      if (userProfile && userProfile.email) {
+        const userData = loadUserData(userProfile.email)
+        return {
+          activeView: 'dashboard',
+          isAuthenticated: true,
+          userProfile,
+          quizzes: userData.quizzes,
+          attempts: userData.attempts,
+          flashcards: userData.flashcards,
+          aiExplanations: userData.aiExplanations,
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing restored user session:', e)
+    }
+  }
+
+  return {
+    activeView: 'landing',
+    isAuthenticated: false,
+    userProfile: null,
+    quizzes: [],
+    attempts: [],
+    flashcards: [],
+    aiExplanations: {},
+  }
+}
+
+const initialState = getInitialState()
+
+export const useQuizStore = create((set, get) => ({
+  activeView: initialState.activeView, 
+  isAuthenticated: initialState.isAuthenticated,
+  userProfile: initialState.userProfile,
+  isGeneratingQuiz: false,
+
+  quizzes: initialState.quizzes,
+  attempts: initialState.attempts,
   activeQuizId: null,
   session: null,
   reviewAttemptId: 'a1',
-  aiExplanations: {},
-  flashcards: [],
+  aiExplanations: initialState.aiExplanations,
+  flashcards: initialState.flashcards,
   creatorDraft: {
     title: '',
     topic: 'General',
@@ -220,13 +310,20 @@ export const useQuizStore = create((set, get) => ({
 
   loginUser: (email, password) => {
     if (email && password) {
+      const userProfile = {
+        name: email.split('@')[0],
+        email: email
+      }
+      localStorage.setItem('quiz_app:current_user', JSON.stringify(userProfile))
+      const userData = loadUserData(email)
       set({
         isAuthenticated: true,
         activeView: 'dashboard',
-        userProfile: {
-          name: email.split('@')[0],
-          email: email
-        }
+        userProfile,
+        quizzes: userData.quizzes,
+        attempts: userData.attempts,
+        flashcards: userData.flashcards,
+        aiExplanations: userData.aiExplanations,
       })
       return true
     }
@@ -234,56 +331,217 @@ export const useQuizStore = create((set, get) => ({
   },
 
   logoutUser: () => {
+    localStorage.removeItem('quiz_app:current_user')
     set({
       isAuthenticated: false,
       userProfile: null,
       activeView: 'landing',
-      session: null
+      session: null,
+      quizzes: [],
+      attempts: [],
+      flashcards: [],
+      aiExplanations: {},
     })
   },
 
-  generateQuizFromCreator: () => {
-    const { creatorDraft } = get()
-    let questions = []
-
-    if (creatorDraft.activeTab === 'raw') {
-      questions = parseRawTextToQuestions(creatorDraft.rawText)
-    } else if (creatorDraft.activeTab === 'code') {
-      questions = parseCodeToQuestions(creatorDraft.code)
-    } else if (creatorDraft.activeTab === 'json') {
-      questions = parseJsonToQuestions(creatorDraft.json)
-    } else if (creatorDraft.activeTab === 'pdf') {
-      questions = parseRawTextToQuestions(creatorDraft.rawText)
+  generateQuizWithGemini: async (sourceText, questionCount) => {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY
+    if (!apiKey) {
+      throw new Error('Gemini API key is not configured. Please check your .env file.')
     }
 
-    const quiz = buildQuizFromPayload({
-      title: creatorDraft.title,
-      topic: creatorDraft.topic,
-      difficulty: creatorDraft.difficulty,
-      questions,
-    })
+    const mcqCount = Math.round(questionCount * 0.40)
+    const fillBlankCount = Math.round(questionCount * 0.20)
+    const trueFalseCount = Math.round(questionCount * 0.20)
+    const shortAnswerCount = questionCount - (mcqCount + fillBlankCount + trueFalseCount)
 
-    set((state) => ({
-      quizzes: [quiz, ...state.quizzes],
-      activeQuizId: quiz.id,
-      activeView: 'quiz',
-      session: {
-        quizId: quiz.id,
-        startedAt: new Date().toISOString(),
-        currentIndex: 0,
-        answers: {},
-        violations: [],
-        finished: false,
-      },
-    }))
+    const promptText = `
+You are an expert educational assessment generator. Your task is to generate exactly ${questionCount} questions based on the following text content:
 
-    return quiz
+---
+${sourceText}
+---
+
+You must strictly adhere to the following rules:
+1. Generate exactly ${questionCount} questions in total.
+2. The question distribution MUST be as follows:
+   - MCQ (Multiple Choice Questions): ${mcqCount} questions.
+   - FILL_BLANK (Fill in the Blanks): ${fillBlankCount} questions.
+   - TRUE_FALSE (True or False): ${trueFalseCount} questions.
+   - SHORT_ANSWER (Short Answer): ${shortAnswerCount} questions.
+3. Every question must be strictly derived from and based on the provided text content. Do not include external knowledge or facts not present in or inferable from the text.
+4. Avoid copy-pasting complete sentences from the text. Phrase questions in your own words.
+5. Some questions must require logical inference or deduction from the text rather than just simple recall.
+6. Avoid trivial, one-word answer questions (especially for Short Answer and MCQ).
+7. For MCQ and FILL_BLANK questions:
+   - Provide exactly 4 options.
+   - Set 'correctIndex' to the 0-based index of the correct option.
+   - Set 'correctAnswer' to an empty string.
+8. For TRUE_FALSE questions:
+   - Provide exactly 2 options: ["True", "False"].
+   - Set 'correctIndex' to 0 if True is correct, or 1 if False is correct.
+   - Set 'correctAnswer' to an empty string.
+9. For SHORT_ANSWER questions:
+   - Provide an empty array for options.
+   - Set 'correctIndex' to 0.
+   - Set 'correctAnswer' to the correct answer string.
+10. Ensure the format matches the JSON schema exactly.
+`.trim()
+
+    const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
+    let lastError;
+
+    for (const model of models) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      text: promptText,
+                    },
+                  ],
+                },
+              ],
+              generationConfig: {
+                responseMimeType: 'application/json',
+                responseSchema: {
+                  type: 'ARRAY',
+                  items: {
+                    type: 'OBJECT',
+                    properties: {
+                      prompt: { type: 'STRING' },
+                      questionType: { type: 'STRING', enum: ['MCQ', 'FILL_BLANK', 'TRUE_FALSE', 'SHORT_ANSWER'] },
+                      options: {
+                        type: 'ARRAY',
+                        items: { type: 'STRING' },
+                      },
+                      correctIndex: { type: 'INTEGER' },
+                      correctAnswer: { type: 'STRING' },
+                      explanation: { type: 'STRING' },
+                    },
+                    required: ['prompt', 'questionType', 'options', 'correctIndex', 'correctAnswer', 'explanation'],
+                  },
+                },
+              },
+            }),
+          }
+        )
+
+        const data = await response.json()
+        if (!response.ok) {
+          const isRateLimit = response.status === 429 || 
+            String(data.error?.message || '').toLowerCase().includes('quota') ||
+            String(data.error?.message || '').toLowerCase().includes('limit') ||
+            String(data.error?.message || '').toLowerCase().includes('exhausted') ||
+            String(data.error?.message || '').toLowerCase().includes('rate') ||
+            String(data.error?.message || '').toLowerCase().includes('demand');
+          
+          if (isRateLimit && model !== models[models.length - 1]) {
+            console.warn(`Model ${model} returned rate limit or high demand error. Retrying with next model...`)
+            continue
+          }
+          throw new Error(data.error?.message || `Gemini API call failed for model ${model}`)
+        }
+
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+        if (!text) {
+          throw new Error('Empty response received from Gemini API.')
+        }
+
+        try {
+          return JSON.parse(text)
+        } catch (parseError) {
+          throw new Error('Failed to parse Gemini response as valid JSON.', { cause: parseError })
+        }
+      } catch (err) {
+        lastError = err
+        const isRateLimitError = err.message?.includes('429') ||
+          err.message?.toLowerCase().includes('quota') ||
+          err.message?.toLowerCase().includes('limit') ||
+          err.message?.toLowerCase().includes('exhausted') ||
+          err.message?.toLowerCase().includes('rate') ||
+          err.message?.toLowerCase().includes('demand');
+        if (isRateLimitError && model !== models[models.length - 1]) {
+          console.warn(`Error using model ${model}: ${err.message}. Retrying with next model...`)
+          continue
+        }
+        throw err
+      }
+    }
+
+    throw lastError || new Error('All Gemini model fallbacks exhausted.')
+  },
+
+  generateQuizFromCreator: async () => {
+    const { creatorDraft } = get()
+    let questions;
+
+    set({ isGeneratingQuiz: true })
+
+    try {
+      if (creatorDraft.activeTab === 'json') {
+        questions = parseJsonToQuestions(creatorDraft.json || '[]')
+      } else {
+        const sourceText =
+          creatorDraft.activeTab === 'code'
+            ? creatorDraft.code
+            : creatorDraft.rawText
+
+        const questionCount = creatorDraft.questionCount || 5
+        questions = await get().generateQuizWithGemini(sourceText, questionCount)
+      }
+
+      const quiz = buildQuizFromPayload({
+        title: creatorDraft.title,
+        topic: creatorDraft.topic,
+        difficulty: creatorDraft.difficulty,
+        questions,
+      })
+
+      set((state) => {
+        const nextQuizzes = [quiz, ...state.quizzes]
+        if (state.userProfile?.email) {
+          saveUserData(state.userProfile.email, { quizzes: nextQuizzes })
+        }
+        return {
+          quizzes: nextQuizzes,
+          activeQuizId: quiz.id,
+          activeView: 'quiz',
+          session: {
+            quizId: quiz.id,
+            startedAt: new Date().toISOString(),
+            currentIndex: 0,
+            answers: {},
+            violations: [],
+            finished: false,
+          },
+        }
+      })
+
+      return quiz
+    } finally {
+      set({ isGeneratingQuiz: false })
+    }
   },
 
   importQuizFromJson: (jsonText) => {
     const questions = parseJsonToQuestions(jsonText)
     const quiz = buildQuizFromPayload({ title: 'Imported Quiz', questions })
-    set((state) => ({ quizzes: [quiz, ...state.quizzes] }))
+    set((state) => {
+      const nextQuizzes = [quiz, ...state.quizzes]
+      if (state.userProfile?.email) {
+        saveUserData(state.userProfile.email, { quizzes: nextQuizzes })
+      }
+      return { quizzes: nextQuizzes }
+    })
     return quiz
   },
 
@@ -368,7 +626,12 @@ export const useQuizStore = create((set, get) => ({
 
     let score = 0
     quiz.questions.forEach((question) => {
-      if (session.answers[question.id] === question.correctIndex) score += 1
+      const isCorrect =
+        question.questionType === 'SHORT_ANSWER'
+          ? String(session.answers[question.id] || '').trim().toLowerCase() ===
+            String(question.correctAnswer || '').trim().toLowerCase()
+          : session.answers[question.id] === question.correctIndex
+      if (isCorrect) score += 1
     })
 
     const attempt = {
@@ -381,20 +644,36 @@ export const useQuizStore = create((set, get) => ({
       violations: session.violations,
     }
 
-    const flashcards = quiz.questions.map((question) => ({
-      id: uid('card'),
-      front: question.prompt,
-      back: question.options[question.correctIndex],
-      mastered: session.answers[question.id] === question.correctIndex,
-    }))
+    const flashcards = quiz.questions.map((question) => {
+      const isCorrect =
+        question.questionType === 'SHORT_ANSWER'
+          ? String(session.answers[question.id] || '').trim().toLowerCase() ===
+            String(question.correctAnswer || '').trim().toLowerCase()
+          : session.answers[question.id] === question.correctIndex
+      return {
+        id: uid('card'),
+        front: question.prompt,
+        back: question.questionType === 'SHORT_ANSWER' ? question.correctAnswer : question.options[question.correctIndex],
+        mastered: isCorrect,
+      }
+    })
 
-    set((state) => ({
-      attempts: [attempt, ...state.attempts],
-      reviewAttemptId: attempt.id,
-      session: { ...session, finished: true },
-      flashcards,
-      activeView: 'review',
-    }))
+    set((state) => {
+      const nextAttempts = [attempt, ...state.attempts]
+      if (state.userProfile?.email) {
+        saveUserData(state.userProfile.email, {
+          attempts: nextAttempts,
+          flashcards,
+        })
+      }
+      return {
+        attempts: nextAttempts,
+        reviewAttemptId: attempt.id,
+        session: { ...session, finished: true },
+        flashcards,
+        activeView: 'review',
+      }
+    })
   },
 
   openReview: (attemptId) => {
@@ -416,22 +695,34 @@ export const useQuizStore = create((set, get) => ({
     await new Promise((resolve) => setTimeout(resolve, 650))
 
     const explanation = buildAiExplanation(question, attempt.answers[questionId])
-    set({
-      aiExplanations: {
-        ...aiExplanations,
+    set((state) => {
+      const nextExplanations = {
+        ...state.aiExplanations,
         [cacheKey]: explanation,
-      },
+      }
+      if (state.userProfile?.email) {
+        saveUserData(state.userProfile.email, { aiExplanations: nextExplanations })
+      }
+      return {
+        aiExplanations: nextExplanations,
+      }
     })
 
     return explanation
   },
 
   toggleFlashcardMastered: (cardId) => {
-    set((state) => ({
-      flashcards: state.flashcards.map((card) =>
+    set((state) => {
+      const nextFlashcards = state.flashcards.map((card) =>
         card.id === cardId ? { ...card, mastered: !card.mastered } : card,
-      ),
-    }))
+      )
+      if (state.userProfile?.email) {
+        saveUserData(state.userProfile.email, { flashcards: nextFlashcards })
+      }
+      return {
+        flashcards: nextFlashcards,
+      }
+    })
   },
 
   getActiveQuiz: () => {

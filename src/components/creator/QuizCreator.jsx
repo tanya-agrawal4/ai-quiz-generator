@@ -23,6 +23,7 @@ export default function QuizCreator() {
   const creatorDraft = useQuizStore((state) => state.creatorDraft)
   const updateCreatorDraft = useQuizStore((state) => state.updateCreatorDraft)
   const generateQuizFromCreator = useQuizStore((state) => state.generateQuizFromCreator)
+  const isGeneratingQuiz = useQuizStore((state) => state.isGeneratingQuiz)
   
   // Extra new states and operations from your updated store
   const extractTextFromPdf = useQuizStore((state) => state.extractTextFromPdf)
@@ -31,10 +32,10 @@ export default function QuizCreator() {
   const [error, setError] = useState('')
   const [pdfSuccessMessage, setPdfSuccessMessage] = useState('')
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
+    setError('')
     try {
-      setError('')
-      generateQuizFromCreator()
+      await generateQuizFromCreator()
     } catch (err) {
       setError(err.message || 'Unable to generate quiz.')
     }
@@ -220,10 +221,20 @@ export default function QuizCreator() {
         <button
           type="button"
           onClick={handleGenerate}
-          className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-600 transition"
+          disabled={isGeneratingQuiz}
+          className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-600 transition disabled:opacity-50"
         >
-          <Sparkles className="h-4 w-4" />
-          Generate Quiz
+          {isGeneratingQuiz ? (
+            <>
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4" />
+              Generate Quiz
+            </>
+          )}
         </button>
       </div>
     </div>

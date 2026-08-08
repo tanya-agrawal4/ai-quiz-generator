@@ -11,12 +11,20 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",
+    "firebase": "^12.17.1",
     "framer-motion": "^12.40.0",
+    "highlight.js": "^11.11.1",
+    "jspdf": "^4.2.1",
+    "katex": "^0.18.2",
     "lucide-react": "^1.17.0",
     "pdfjs-dist": "^6.0.227",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.8.1",
+    "rehype-highlight": "^7.0.2",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0",
     "zustand": "^5.0.14"
   },
   "devDependencies": {

@@ -6,6 +6,7 @@ import {
   Layers3,
   Sparkles,
   LogOut,
+  Users,
 } from 'lucide-react'
 import { useQuizStore } from '../../context/QuizStore'
 
@@ -15,6 +16,7 @@ const NAV_ITEMS = [
   { id: 'quiz', label: 'Take Quiz', icon: PlayCircle },
   { id: 'review', label: 'Review', icon: ClipboardCheck },
   { id: 'flashcards', label: 'Flashcards', icon: Layers3 },
+  { id: 'multiplayer', label: 'Live Multiplayer', icon: Users },
 ]
 
 export default function Sidebar() {
@@ -74,31 +76,41 @@ export default function Sidebar() {
         <hr className="border-border" />
 
         {/* Dynamic User Profile Block */}
-        <div className="flex flex-col gap-3 text-left px-1">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent font-bold uppercase text-sm">
-              {userProfile?.name?.charAt(0) || 'T'}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-ink capitalize">
-                {userProfile?.name || 'Tanya'}
-              </p>
-              <p className="truncate text-xs text-subtle">
-                {userProfile?.email || 'tanya@example.com'}
-              </p>
-            </div>
-          </div>
+        {(() => {
+          const displayName = userProfile?.name || userProfile?.email || 'User'
+          const displayEmail = userProfile?.email || ''
+          const initial = displayName.charAt(0).toUpperCase()
 
-          {/* Fully Functional Sign Out Operational Trigger */}
-          <button
-            type="button"
-            onClick={logoutUser}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive-soft transition group"
-          >
-            <LogOut className="h-4 w-4 text-destructive group-hover:translate-x-0.5 transition-transform" />
-            Sign Out
-          </button>
-        </div>
+          return (
+            <div className="flex flex-col gap-3 text-left px-1">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent font-bold uppercase text-sm">
+                  {initial}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-ink capitalize">
+                    {displayName}
+                  </p>
+                  {displayEmail && (
+                    <p className="truncate text-xs text-subtle">
+                      {displayEmail}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Fully Functional Sign Out Operational Trigger */}
+              <button
+                type="button"
+                onClick={logoutUser}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive-soft transition group"
+              >
+                <LogOut className="h-4 w-4 text-destructive group-hover:translate-x-0.5 transition-transform" />
+                Sign Out
+              </button>
+            </div>
+          )
+        })()}
       </div>
     </aside>
   )

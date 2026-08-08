@@ -27,12 +27,12 @@ function StatCard({ icon: Icon, label, value, hint }) {
 }
 
 export default function Dashboard() {
+  const isAuthenticated = useQuizStore((state) => state.isAuthenticated)
   const quizzes = useQuizStore((state) => state.quizzes)
   const attempts = useQuizStore((state) => state.attempts)
   const startQuiz = useQuizStore((state) => state.startQuiz)
   const openReview = useQuizStore((state) => state.openReview)
   
-  // Real dynamic user state pull kiya taaki middle me bada sa show ho sake
   const user = useQuizStore((state) => state.userProfile)
 
   const stats = useMemo(
@@ -40,12 +40,18 @@ export default function Dashboard() {
     [quizzes, attempts],
   )
 
+  if (!isAuthenticated || !user) {
+    return null
+  }
+
+  const displayName = user.name || user.email || 'User'
+
   return (
     <div className="space-y-8 p-6 text-left">
-      {/* Middle Content View me Bada Dynamic Welcome Message Header */}
+      {/* Dynamic Welcome Message Header for Authenticated User */}
       <div>
         <h1 className="text-4xl font-bold tracking-tight text-ink">
-          Welcome, {user?.name || 'Tanya'}! 👋
+          Welcome, {displayName}! 👋
         </h1>
         <p className="mt-2 text-base text-subtle">
           Here is your custom AI quiz generator analytics overview for today.

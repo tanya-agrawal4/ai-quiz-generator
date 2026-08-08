@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Bot, CheckCircle2, XCircle } from 'lucide-react'
 import { useQuizStore } from '../../context/QuizStore'
+import ExportButtons from '../quiz/ExportButtons'
+import FormattedText from '../common/FormattedText'
 
 export default function QuizReview() {
   const reviewAttemptId = useQuizStore((state) => state.reviewAttemptId)
@@ -41,20 +43,24 @@ export default function QuizReview() {
           </p>
         </div>
 
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-ink">Attempt</span>
-          <select
-            value={attempt.id}
-            onChange={(event) => openReview(event.target.value)}
-            className="rounded-xl border border-border bg-surface px-4 py-2.5 text-sm outline-none"
-          >
-            {attempts.map((item) => (
-              <option key={item.id} value={item.id}>
-                {new Date(item.completedAt).toLocaleString()} · {item.score}/{item.total}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex flex-wrap items-center gap-4">
+          <ExportButtons quiz={quiz} />
+
+          <label className="space-y-2 text-left">
+            <span className="text-sm font-medium text-ink block">Attempt</span>
+            <select
+              value={attempt.id}
+              onChange={(event) => openReview(event.target.value)}
+              className="rounded-xl border border-border bg-surface px-4 py-2.5 text-sm outline-none"
+            >
+              {attempts.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {new Date(item.completedAt).toLocaleString()} · {item.score}/{item.total}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -67,6 +73,18 @@ export default function QuizReview() {
               : selectedIndex === question.correctIndex
           const cacheKey = `${attempt.id}:${question.id}`
           const aiText = aiExplanations[cacheKey]
+
+          const userAnswerText =
+            selectedIndex == null
+              ? 'Not answered'
+              : question.questionType === 'SHORT_ANSWER'
+              ? selectedIndex
+              : question.options[selectedIndex]
+
+          const correctAnswerText =
+            question.questionType === 'SHORT_ANSWER'
+              ? question.correctAnswer
+              : question.options[question.correctIndex]
 
           return (
             <article
@@ -81,30 +99,26 @@ export default function QuizReview() {
                 )}
                 <div className="flex-1">
                   <p className="text-sm font-medium text-subtle">Question {index + 1}</p>
-                  <h2 className="mt-1 text-lg font-semibold text-ink">{question.prompt}</h2>
+                  <div className="mt-1 text-lg font-semibold text-ink">
+                    <FormattedText>{question.prompt}</FormattedText>
+                  </div>
 
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
                     <div className="rounded-xl border border-border bg-muted p-4">
                       <p className="text-xs font-semibold uppercase tracking-wide text-subtle">
                         Your Answer
                       </p>
-                      <p className="mt-2 text-sm text-ink">
-                        {selectedIndex == null
-                          ? 'Not answered'
-                          : question.questionType === 'SHORT_ANSWER'
-                          ? selectedIndex
-                          : question.options[selectedIndex]}
-                      </p>
+                      <div className="mt-2 text-sm text-ink font-medium">
+                        <FormattedText>{userAnswerText}</FormattedText>
+                      </div>
                     </div>
                     <div className="rounded-xl border border-border bg-muted p-4">
                       <p className="text-xs font-semibold uppercase tracking-wide text-subtle">
                         Correct Answer
                       </p>
-                      <p className="mt-2 text-sm text-ink">
-                        {question.questionType === 'SHORT_ANSWER'
-                          ? question.correctAnswer
-                          : question.options[question.correctIndex]}
-                      </p>
+                      <div className="mt-2 text-sm text-ink font-medium">
+                        <FormattedText>{correctAnswerText}</FormattedText>
+                      </div>
                     </div>
                   </div>
 
@@ -120,7 +134,7 @@ export default function QuizReview() {
 
                   {aiText && (
                     <div className="mt-4 rounded-xl border border-indigo-200 bg-accent-soft p-4 text-sm leading-6 text-ink">
-                      {aiText}
+                      <FormattedText>{aiText}</FormattedText>
                     </div>
                   )}
                 </div>

@@ -1,13 +1,14 @@
 import { useState } from 'react'
-import { Braces, Code2, FileText, Sparkles, Upload } from 'lucide-react'
+import { Braces, Code2, FileText, Globe, Link, Loader2, Sparkles, Upload, Video } from 'lucide-react'
 import { useQuizStore } from '../../context/QuizStore'
 
-// Added PDF tab configuration to your original TABS structure
+// Added PDF and URL tab configurations to TABS structure
 const TABS = [
   { id: 'raw', label: 'Raw Text', icon: FileText },
   { id: 'code', label: 'Code', icon: Code2 },
   { id: 'json', label: 'JSON', icon: Braces },
   { id: 'pdf', label: 'PDF Document', icon: FileText },
+  { id: 'url', label: 'URL / YouTube / Article', icon: Globe },
 ]
 
 const SAMPLE_JSON = `[
@@ -25,12 +26,17 @@ export default function QuizCreator() {
   const generateQuizFromCreator = useQuizStore((state) => state.generateQuizFromCreator)
   const isGeneratingQuiz = useQuizStore((state) => state.isGeneratingQuiz)
   
-  // Extra new states and operations from your updated store
+  // PDF and URL state operations from store
   const extractTextFromPdf = useQuizStore((state) => state.extractTextFromPdf)
   const isParsingPdf = useQuizStore((state) => state.isParsingPdf)
+
+  const extractTextFromUrl = useQuizStore((state) => state.extractTextFromUrl)
+  const isFetchingUrl = useQuizStore((state) => state.isFetchingUrl)
   
   const [error, setError] = useState('')
   const [pdfSuccessMessage, setPdfSuccessMessage] = useState('')
+  const [urlInput, setUrlInput] = useState('')
+  const [urlSuccessMessage, setUrlSuccessMessage] = useState('')
 
   const handleGenerate = async () => {
     setError('')
@@ -41,23 +47,52 @@ export default function QuizCreator() {
     }
   }
 
-  // Intercepts uploaded file buffer stream
+  const handleUrlFetch = async (e) => {
+    e?.preventDefault()
+    if (!urlInput || !urlInput.trim()) {
+      setError('Please enter a URL (YouTube video link or Article URL).')
+      return
+    }
+
+    try {
+      setError('')
+      setUrlSuccessMessage('')
+      const result = await extractTextFromUrl(urlInput)
+      setUrlSuccessMessage(`Successfully extracted ${result.charCount} characters of text/transcript! Switched to Raw Text mode.`)
+    } catch (err) {
+      setError(err.message || 'Failed to extract content from URL.')
+    }
+  }
+
+  // Intercepts uploaded file buffer stream with strict PDF validation & UI feedback
   const handlePdfFileSelection = async (event) => {
-    const file = event.target.files[0]
+    const file = event.target.files?.[0]
     if (!file) return
 
-    if (file.type !== 'application/pdf') {
-      setError('Invalid file type. Please upload a standard PDF document.')
+    // Reset input target value so selecting the same file triggers onChange again if needed
+    event.target.value = ''
+
+    console.log('[QuizCreator] User selected file:', file.name, '| Size:', file.size, 'bytes | Type:', file.type)
+
+    const isPdfExtension = file.name.toLowerCase().endsWith('.pdf')
+    const isPdfMime = file.type === 'application/pdf'
+
+    if (!isPdfExtension && !isPdfMime) {
+      console.warn('[QuizCreator Validation Fault] Non-PDF file selected:', file.name)
+      setError('Invalid file format. Please select a valid .pdf file.')
+      setPdfSuccessMessage('')
       return
     }
 
     try {
       setError('')
       setPdfSuccessMessage('')
-      await extractTextFromPdf(file)
-      setPdfSuccessMessage(`Successfully extracted and synchronised data from "${file.name}" into context!`)
+      const result = await extractTextFromPdf(file)
+      console.log('[QuizCreator] PDF extraction successful:', result)
+      setPdfSuccessMessage(`Successfully extracted ${result.charCount} characters from ${result.numPages} page(s) in "${file.name}". Switched to Raw Text mode.`)
     } catch (err) {
-      setError(err.message || 'Failed to successfully extract text from PDF.')
+      console.error('[QuizCreator Fault] Error during PDF text extraction:', err)
+      setError(err.message || 'Failed to extract text from the PDF file.')
     }
   }
 
@@ -175,13 +210,14 @@ export default function QuizCreator() {
             />
           )}
 
-          {/* New Interactive PDF Upload Zone View Pane */}
+          {/* Interactive PDF Upload Zone View Pane */}
           {creatorDraft.activeTab === 'pdf' && (
             <div className="w-full rounded-xl border border-dashed border-border bg-muted/50 px-4 py-12 flex flex-col items-center justify-center text-center min-h-[290px]">
               {isParsingPdf ? (
-                <div className="flex flex-col items-center space-y-3 animate-pulse">
-                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
-                  <p className="text-sm font-medium text-accent">Extracting high-density document content...</p>
+                <div className="flex flex-col items-center space-y-3">
+                  <div className="h-9 w-9 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+                  <p className="text-base font-semibold text-accent animate-pulse">Parsing Document...</p>
+                  <p className="text-xs text-subtle">Extracting text vectors page by page...</p>
                 </div>
               ) : (
                 <div className="space-y-4 max-w-md">
@@ -189,22 +225,78 @@ export default function QuizCreator() {
                     <Upload className="h-6 w-6" />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm font-semibold text-ink">Upload reference material file</p>
-                    <p className="text-xs text-subtle">Supports single or multi-page documentation PDFs</p>
+                    <p className="text-sm font-semibold text-ink">Upload reference material PDF</p>
+                    <p className="text-xs text-subtle">Strictly accepts .pdf documents</p>
                   </div>
                   <label className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-surface border border-border px-4 py-2.5 text-sm font-medium text-ink shadow-sm hover:bg-muted transition">
                     <span>Select PDF File</span>
                     <input
                       type="file"
-                      accept=".pdf"
+                      accept=".pdf,application/pdf"
                       className="hidden"
                       onChange={handlePdfFileSelection}
                     />
                   </label>
                   {pdfSuccessMessage && (
-                    <p className="text-xs font-medium text-green-600 mt-2">{pdfSuccessMessage}</p>
+                    <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-xs font-medium text-green-700 mt-3">
+                      {pdfSuccessMessage}
+                    </div>
                   )}
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* Interactive URL / YouTube / Article Fetch Pane */}
+          {creatorDraft.activeTab === 'url' && (
+            <div className="w-full rounded-xl border border-border bg-muted/40 p-8 flex flex-col items-center justify-center text-center min-h-[290px]">
+              {isFetchingUrl ? (
+                <div className="flex flex-col items-center space-y-3">
+                  <div className="h-9 w-9 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+                  <p className="text-base font-semibold text-accent animate-pulse">Extracting Content from URL...</p>
+                  <p className="text-xs text-subtle">Fetching web article text or YouTube video transcript...</p>
+                </div>
+              ) : (
+                <form onSubmit={handleUrlFetch} className="w-full max-w-xl space-y-6">
+                  <div className="space-y-2">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft text-accent mb-2">
+                      <Globe className="h-6 w-6" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-ink">Fetch Content from URL</h3>
+                    <p className="text-xs text-subtle">
+                      Paste a YouTube video link or Web Article URL to extract text and transcript automatically.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-subtle">
+                        <Link className="h-4 w-4" />
+                      </div>
+                      <input
+                        type="url"
+                        value={urlInput}
+                        onChange={(e) => setUrlInput(e.target.value)}
+                        placeholder="https://www.youtube.com/watch?v=... or https://example.com/article"
+                        className="w-full rounded-xl border border-border bg-surface pl-10 pr-4 py-3 text-sm outline-none ring-accent/20 focus:border-accent focus:ring-4 text-ink"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isFetchingUrl}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-600 transition disabled:opacity-50 shrink-0"
+                    >
+                      <Link className="h-4 w-4" />
+                      <span>Fetch Content</span>
+                    </button>
+                  </div>
+
+                  {urlSuccessMessage && (
+                    <div className="rounded-xl bg-green-50 border border-green-200 p-3.5 text-xs font-medium text-green-700 text-left">
+                      {urlSuccessMessage}
+                    </div>
+                  )}
+                </form>
               )}
             </div>
           )}

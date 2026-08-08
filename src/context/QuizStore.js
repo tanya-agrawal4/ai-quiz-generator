@@ -1,4 +1,10 @@
 import { create } from 'zustand'
+import * as pdfjsLib from 'pdfjs-dist'
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
+
+if (pdfjsLib?.GlobalWorkerOptions) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
+}
 
 const SAMPLE_QUIZZES = [
   {
@@ -66,7 +72,7 @@ const SAMPLE_ATTEMPTS = [
   },
 ]
 
-const VIEWS = ['landing', 'dashboard', 'creator', 'quiz', 'review', 'flashcards']
+const VIEWS = ['landing', 'dashboard', 'creator', 'quiz', 'review', 'flashcards', 'multiplayer']
 
 function uid(prefix = 'id') {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`
@@ -300,6 +306,11 @@ export const useQuizStore = create((set, get) => ({
 
   setView: (view) => {
     if (!VIEWS.includes(view)) return
+    const { isAuthenticated } = get()
+    if (!isAuthenticated && view !== 'landing') {
+      set({ activeView: 'landing' })
+      return
+    }
     set({ activeView: view })
   },
 
@@ -785,53 +796,126 @@ You must strictly adhere to the following rules:
   isParsingPdf: false,
   extractTextFromPdf: async (file) => {
     set({ isParsingPdf: true })
-    try {
-      const arrayBuffer = await file.arrayBuffer()
-      
-      // Explicitly pull the window subsystem context
-      let pdfjs = window.pdfjsLib;
-      
-      // If network latency slowed down the script injection, wait 800ms and retry automatically
-      if (!pdfjs) {
-        await new Promise((resolve) => setTimeout(resolve, 800));
-        pdfjs = window.pdfjsLib;
-      }
-      
-      if (!pdfjs) {
-        throw new Error('CDN Script processing timed out. Please check your internet connection and refresh.')
-      }
-      
-      // Configure background worker threading safely using our window tracking variables
-      pdfjs.GlobalWorkerOptions.workerSrc = window.pdfjsLibWorkerUrl || 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-      
-      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise
-      let compiledText = ''
+    console.log('[PDF Processing] Starting extraction for file:', file?.name, 'Size:', file?.size, 'bytes', 'Type:', file?.type)
 
+    try {
+      if (!file) {
+        throw new Error('No file selected for PDF processing.')
+      }
+
+      console.log('[PDF Processing] Converting file to ArrayBuffer...')
+      const arrayBuffer = await file.arrayBuffer()
+      console.log('[PDF Processing] ArrayBuffer successfully loaded, byte length:', arrayBuffer.byteLength)
+
+      console.log('[PDF Processing] Loading PDF document into PDF.js engine...')
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
+      const pdf = await loadingTask.promise
+      console.log('[PDF Processing] Document loaded successfully. Total pages:', pdf.numPages)
+
+      let compiledText = ''
       for (let i = 1; i <= pdf.numPages; i++) {
+        console.log(`[PDF Processing] Extracting text from page ${i}/${pdf.numPages}...`)
         const page = await pdf.getPage(i)
         const textContent = await page.getTextContent()
         const pageLines = textContent.items.map((item) => item.str).join(' ')
-        compiledText += pageLines + '\n'
+        compiledText += pageLines + '\n\n'
       }
 
       const cleanText = compiledText.trim()
+      console.log('[PDF Processing] Text extraction completed. Total character count:', cleanText.length)
+
       if (!cleanText) {
-        throw new Error('This PDF appears to be a scanned image or photo containing no selectable text vectors.')
+        throw new Error('No readable text found in the PDF. The file may be a scanned image or empty.')
       }
-      
+
       set((state) => ({
         isParsingPdf: false,
         creatorDraft: {
           ...state.creatorDraft,
           rawText: cleanText,
-        }
+          activeTab: 'raw',
+        },
       }))
-      return cleanText
 
+      return { text: cleanText, numPages: pdf.numPages, charCount: cleanText.length }
     } catch (error) {
       set({ isParsingPdf: false })
-      console.error('PDF Processing Pipeline Fault:', error)
-      alert(`Parsing Issue: ${error.message || 'Unable to accurately extract structure.'}`)
+      console.error('[PDF Processing Fault] Failed to extract text from PDF:', error)
+      throw error
+    }
+  },
+
+  isFetchingUrl: false,
+  extractTextFromUrl: async (inputUrl) => {
+    set({ isFetchingUrl: true })
+    console.log('[URL Fetcher] Starting extraction for URL:', inputUrl)
+
+    try {
+      if (!inputUrl || !inputUrl.trim()) {
+        throw new Error('Please enter a valid URL (e.g. YouTube video link or Web article URL).')
+      }
+
+      let cleanUrl = inputUrl.trim()
+      if (!/^https?:\/\//i.test(cleanUrl)) {
+        cleanUrl = 'https://' + cleanUrl
+      }
+
+      try {
+        new URL(cleanUrl)
+      } catch {
+        throw new Error('Invalid URL format. Please enter a full web address (e.g., https://example.com/article).')
+      }
+
+      console.log('[URL Fetcher] Fetching content via CORS-friendly reader endpoint for:', cleanUrl)
+
+      // Use r.jina.ai serverless reader API (free, open, CORS-friendly markdown/transcript reader for articles and YouTube URLs)
+      const readerApiUrl = `https://r.jina.ai/${cleanUrl}`
+      const response = await fetch(readerApiUrl, {
+        headers: {
+          'Accept': 'text/plain, text/markdown',
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch content from URL (HTTP ${response.status}). The web page or video transcript may be private or restricted.`)
+      }
+
+      let text = await response.text()
+      text = text.trim()
+
+      if (!text || text.length < 50) {
+        console.log('[URL Fetcher] Reader returned minimal text. Retrying via AllOrigins CORS proxy...')
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`
+        const proxyRes = await fetch(proxyUrl)
+        if (proxyRes.ok) {
+          const rawHtml = await proxyRes.text()
+          const parser = new DOMParser()
+          const doc = parser.parseFromString(rawHtml, 'text/html')
+          text = doc.body?.textContent || ''
+          text = text.replace(/\s+/g, ' ').trim()
+        }
+      }
+
+      if (!text || text.length < 30) {
+        throw new Error('Could not extract readable text from the provided URL. Please check the link or paste the text directly.')
+      }
+
+      console.log('[URL Fetcher] Successfully extracted text length:', text.length, 'characters')
+
+      set((state) => ({
+        isFetchingUrl: false,
+        creatorDraft: {
+          ...state.creatorDraft,
+          rawText: text,
+          activeTab: 'raw',
+        },
+      }))
+
+      return { text, charCount: text.length }
+    } catch (error) {
+      set({ isFetchingUrl: false })
+      console.error('[URL Fetcher Fault] Failed to extract content from URL:', error)
+      throw error
     }
   },
 }))

@@ -1,10 +1,12 @@
+import { useEffect } from 'react'
 import Sidebar from './components/dashboard/Sidebar'
 import Dashboard from './components/dashboard/Dashboard'
 import QuizCreator from './components/creator/QuizCreator'
 import QuizWorkspace from './components/quiz/QuizWorkspace'
 import QuizReview from './components/review/QuizReview'
 import FlashcardDeck from './components/flashcards/FlashcardDeck'
-import LandingPage from './components/auth/LandingPage' // Imported your new landing page layout
+import LiveMultiplayer from './components/multiplayer/LiveMultiplayer'
+import LandingPage from './components/auth/LandingPage'
 import { useQuizStore } from './context/QuizStore'
 
 const VIEW_MAP = {
@@ -14,11 +16,19 @@ const VIEW_MAP = {
   quiz: QuizWorkspace,
   review: QuizReview,
   flashcards: FlashcardDeck,
+  multiplayer: LiveMultiplayer,
 }
 
 export default function App() {
   const activeView = useQuizStore((state) => state.activeView)
   const isAuthenticated = useQuizStore((state) => state.isAuthenticated)
+  const setView = useQuizStore((state) => state.setView)
+
+  useEffect(() => {
+    if (!isAuthenticated && activeView !== 'landing') {
+      setView('landing')
+    }
+  }, [isAuthenticated, activeView, setView])
 
   // 1. Route Security Gate: Intercept unauthenticated sessions completely
   if (activeView === 'landing' || !isAuthenticated) {

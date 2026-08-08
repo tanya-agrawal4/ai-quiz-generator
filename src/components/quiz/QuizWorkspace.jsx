@@ -204,6 +204,7 @@ export default function QuizWorkspace() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <ExportButtons quiz={quiz} />
             <div className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm text-subtle">
               <Timer className="h-4 w-4" />
               {minutes}:{seconds}
@@ -242,7 +243,9 @@ export default function QuizWorkspace() {
         )}
 
         <section className="rounded-2xl border border-border bg-surface p-8 shadow-sm">
-          <h2 className="text-xl font-semibold leading-8 text-ink">{currentQuestion.prompt}</h2>
+          <div className="text-xl font-semibold leading-8 text-ink">
+            <FormattedText>{currentQuestion.prompt}</FormattedText>
+          </div>
 
           <div className="mt-6">
             {currentQuestion.questionType === 'SHORT_ANSWER' ? (
@@ -266,16 +269,18 @@ export default function QuizWorkspace() {
                       type="button"
                       onClick={() => selectAnswer(currentQuestion.id, index)}
                       className={[
-                        'rounded-xl border px-4 py-4 text-left text-sm transition',
+                        'flex items-center gap-3 rounded-xl border px-4 py-4 text-left text-sm transition',
                         selected
                           ? 'border-accent bg-accent-soft text-accent'
                           : 'border-border bg-muted text-ink hover:border-slate-300 hover:bg-surface',
                       ].join(' ')}
                     >
-                      <span className="mr-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-xs font-semibold">
+                      <span className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-xs font-semibold">
                         {String.fromCharCode(65 + index)}
                       </span>
-                      {option}
+                      <div className="flex-1">
+                        <FormattedText>{option}</FormattedText>
+                      </div>
                     </button>
                   )
                 })}

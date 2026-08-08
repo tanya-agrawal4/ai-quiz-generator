@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight, RotateCcw, Star } from 'lucide-react'
 import { useQuizStore } from '../../context/QuizStore'
+import FormattedText from '../common/FormattedText'
 
 export default function FlashcardDeck() {
   const flashcards = useQuizStore((state) => state.flashcards)
@@ -63,9 +64,9 @@ export default function FlashcardDeck() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-subtle">
                     {flipped ? 'Answer' : 'Question'}
                   </p>
-                  <p className="mt-4 text-2xl font-semibold leading-9 text-ink">
-                    {flipped ? card.back : card.front}
-                  </p>
+                  <div className="mt-4 text-xl font-semibold leading-8 text-ink">
+                    <FormattedText>{flipped ? card.back : card.front}</FormattedText>
+                  </div>
                 </div>
                 <p className="text-sm text-subtle">Tap to flip</p>
               </div>

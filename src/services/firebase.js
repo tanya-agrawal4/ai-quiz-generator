@@ -29,6 +29,21 @@ const app = initializeApp(firebaseConfig)
 // Initialize Firestore Instance
 const db = getFirestore(app)
 
+// ─── Firebase Configuration Validation ───────────────────────────────────
+// Warn loudly if Firebase is using fallback/demo credentials
+if (
+  !import.meta.env.VITE_FIREBASE_API_KEY ||
+  import.meta.env.VITE_FIREBASE_API_KEY === 'YOUR_FIREBASE_API_KEY_HERE'
+) {
+  console.warn(
+    '%c⚠️ FIREBASE CONFIG MISSING — Using demo fallback credentials. Multiplayer rooms will NOT work!\n' +
+    'Set VITE_FIREBASE_* variables in your .env file with real Firebase project credentials.\n' +
+    'See: https://console.firebase.google.com → Project Settings → Your apps → Web config',
+    'color: #ff4444; font-weight: bold; font-size: 13px; background: #fff3f3; padding: 8px; border-radius: 4px;'
+  )
+}
+// ─────────────────────────────────────────────────────────────────────────
+
 export {
   db,
   doc,

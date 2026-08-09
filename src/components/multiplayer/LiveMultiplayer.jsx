@@ -47,6 +47,15 @@ export default function LiveMultiplayer() {
     : `guest_${Math.random().toString(36).slice(2, 8)}`
   const userName = userProfile?.name || userProfile?.email || 'Anonymous Player'
 
+  // ─── Debug: Firebase connectivity check on component mount ────────────
+  useEffect(() => {
+    console.log('[Multiplayer] Component mounted. Firebase db instance:', db ? '✅ initialized' : '❌ missing')
+    if (!import.meta.env.VITE_FIREBASE_API_KEY || import.meta.env.VITE_FIREBASE_API_KEY === 'YOUR_FIREBASE_API_KEY_HERE') {
+      console.warn('[Multiplayer] ⚠️ Firebase credentials are placeholder/missing. Hosting and joining rooms will fail.')
+      setError('Firebase is not configured. Add real VITE_FIREBASE_* credentials to your .env file and restart the dev server.')
+    }
+  }, [])
+
   // Real-time Firestore subscription via onSnapshot
   useEffect(() => {
     if (!currentRoomCode) return undefined
@@ -85,6 +94,9 @@ export default function LiveMultiplayer() {
 
   // Host: Create a new Multiplayer Room
   const handleHostRoomCreation = async () => {
+    console.log('Host button clicked!')
+    console.log('[Multiplayer Host] Selected quiz ID:', selectedQuizId, '| User:', userName)
+
     const quizToHost = quizzes.find((q) => q.id === selectedQuizId) || quizzes[0]
     if (!quizToHost) {
       setError('Please select or create a quiz first.')
@@ -137,6 +149,9 @@ export default function LiveMultiplayer() {
   // Peer: Join existing Multiplayer Room via Code
   const handleJoinRoom = async (e) => {
     e?.preventDefault()
+    console.log('Join button clicked, code:', roomCodeInput)
+    console.log('[Multiplayer Peer] Attempting to join room:', roomCodeInput, '| User:', userName)
+
     const cleanCode = roomCodeInput.trim()
     if (!cleanCode || cleanCode.length < 4) {
       setError('Please enter a valid 6-digit room code.')
@@ -303,6 +318,13 @@ export default function LiveMultiplayer() {
                     ))}
                   </select>
                 </label>
+
+                {error && (
+                  <div className="flex items-center gap-2 text-xs font-semibold text-danger bg-red-50 border border-red-200 rounded-xl p-3">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
 
                 <button
                   type="button"

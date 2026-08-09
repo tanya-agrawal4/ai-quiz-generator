@@ -8,6 +8,8 @@ import {
   onSnapshot,
   arrayUnion,
   serverTimestamp,
+  collection,
+  addDoc,
 } from 'firebase/firestore'
 
 // Firebase Configuration Object
@@ -36,4 +38,6 @@ export {
   onSnapshot,
   arrayUnion,
   serverTimestamp,
+  collection,
+  addDoc,
 }

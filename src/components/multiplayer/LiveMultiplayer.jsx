@@ -567,55 +567,87 @@ export default function LiveMultiplayer() {
       )}
 
       {/* COMPLETED QUIZ LEADERBOARD SCREEN */}
-      {isCompleted && (
-        <div className="rounded-3xl border border-border bg-surface p-10 text-center shadow-sm space-y-8 max-w-2xl mx-auto">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-amber-50 text-amber-500">
-            <Trophy className="h-10 w-10" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-3xl font-extrabold text-ink">Multiplayer Match Completed!</h2>
-            <p className="text-subtle text-sm">Final scores synced in real time across all players.</p>
-          </div>
+      {isCompleted && (() => {
+        const userParticipant = roomData?.participants?.[userId]
+        const totalQ = roomData?.quiz?.questions?.length || 0
+        const userScore = userParticipant?.score || 0
+        const accuracy = totalQ > 0 ? Math.round((userScore / totalQ) * 100) : 0
 
-          <div className="space-y-3">
-            {participantsList
-              .sort((a, b) => (b.score || 0) - (a.score || 0))
-              .map((p, idx) => (
-                <div
-                  key={idx}
-                  className={[
-                    'flex items-center justify-between rounded-2xl border p-4 text-left transition',
-                    idx === 0
-                      ? 'border-amber-300 bg-amber-50/50 shadow-sm'
-                      : 'border-border bg-muted',
-                  ].join(' ')}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface border border-border font-bold text-sm text-ink">
-                      {idx === 0 ? '🏆' : `#${idx + 1}`}
-                    </span>
-                    <div>
-                      <p className="font-bold text-ink">{p.name}</p>
-                      <p className="text-xs text-subtle">{p.email}</p>
-                    </div>
-                  </div>
-                  <span className="font-mono font-extrabold text-lg text-accent">
-                    {p.score || 0} pts
-                  </span>
+        let aiFeedback = ''
+        if (accuracy >= 80) {
+          aiFeedback = `🌟 Outstanding Performance! You achieved ${accuracy}% accuracy (${userScore}/${totalQ} correct). Your conceptual speed and recall under live match conditions were top-tier!`
+        } else if (accuracy >= 50) {
+          aiFeedback = `👍 Strong Effort! You scored ${userScore}/${totalQ} (${accuracy}% accuracy). Reviewing missed questions in Flashcard mode will help elevate you to the #1 spot.`
+        } else {
+          aiFeedback = `💡 Diagnostic Insights: You completed the match with ${accuracy}% accuracy. Recommend reviewing explanations in the Review panel to solidify core concepts.`
+        }
+
+        return (
+          <div className="rounded-3xl border border-border bg-surface p-10 text-center shadow-sm space-y-8 max-w-2xl mx-auto">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-amber-50 text-amber-500">
+              <Trophy className="h-10 w-10" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-3xl font-extrabold text-ink">Multiplayer Match Completed!</h2>
+              <p className="text-subtle text-sm">Final scores synced in real time across all players.</p>
+            </div>
+
+            {/* AI Performance Analysis & Score Accuracy Summary */}
+            <div className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-6 text-left space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-indigo-900 font-bold">
+                  <Sparkles className="h-5 w-5 text-indigo-600" />
+                  <span>AI Performance Analysis</span>
                 </div>
-              ))}
-          </div>
+                <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-indigo-600 text-white">
+                  {accuracy}% Accuracy ({userScore}/{totalQ})
+                </span>
+              </div>
+              <p className="text-xs text-indigo-950 leading-relaxed font-medium">
+                {aiFeedback}
+              </p>
+            </div>
 
-          <button
-            type="button"
-            onClick={() => setMode('lobby')}
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-6 py-3 text-sm font-medium text-ink hover:bg-muted"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back to Arena Lobby
-          </button>
-        </div>
-      )}
+            <div className="space-y-3">
+              {participantsList
+                .sort((a, b) => (b.score || 0) - (a.score || 0))
+                .map((p, idx) => (
+                  <div
+                    key={idx}
+                    className={[
+                      'flex items-center justify-between rounded-2xl border p-4 text-left transition',
+                      idx === 0
+                        ? 'border-amber-300 bg-amber-50/50 shadow-sm'
+                        : 'border-border bg-muted',
+                    ].join(' ')}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface border border-border font-bold text-sm text-ink">
+                        {idx === 0 ? '🏆' : `#${idx + 1}`}
+                      </span>
+                      <div>
+                        <p className="font-bold text-ink">{p.name}</p>
+                        <p className="text-xs text-subtle">{p.email}</p>
+                      </div>
+                    </div>
+                    <span className="font-mono font-extrabold text-lg text-accent">
+                      {p.score || 0} pts
+                    </span>
+                  </div>
+                ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setMode('lobby')}
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-6 py-3 text-sm font-medium text-ink hover:bg-muted"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back to Arena Lobby
+            </button>
+          </div>
+        )
+      })()}
     </div>
   )
 }

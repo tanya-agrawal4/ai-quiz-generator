@@ -13,15 +13,23 @@ export default function ExportButtons({ quiz }) {
   }
 
   const handlePdfExport = () => {
-    exportQuizToPdf(quiz)
-    setPdfSuccess(true)
-    setTimeout(() => setPdfSuccess(false), 2500)
+    try {
+      exportQuizToPdf(quiz)
+      setPdfSuccess(true)
+      setTimeout(() => setPdfSuccess(false), 2500)
+    } catch (err) {
+      console.error('PDF export failed:', err)
+    }
   }
 
   const handleCsvExport = () => {
-    exportQuizToCsv(quiz)
-    setCsvSuccess(true)
-    setTimeout(() => setCsvSuccess(false), 2500)
+    try {
+      exportQuizToCsv(quiz)
+      setCsvSuccess(true)
+      setTimeout(() => setCsvSuccess(false), 2500)
+    } catch (err) {
+      console.error('CSV export failed:', err)
+    }
   }
 
   return (

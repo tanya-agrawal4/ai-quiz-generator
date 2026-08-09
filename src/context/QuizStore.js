@@ -248,34 +248,40 @@ function saveUserData(email, data) {
 
 const getInitialState = () => {
   const currentUserStr = localStorage.getItem('quiz_app:current_user')
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '/'
+
+  let isAuthenticated = false
+  let userProfile = null
+  let userData = { quizzes: [], attempts: [], flashcards: [], aiExplanations: {} }
+
   if (currentUserStr) {
     try {
-      const userProfile = JSON.parse(currentUserStr)
-      if (userProfile && userProfile.email) {
-        const userData = loadUserData(userProfile.email)
-        return {
-          activeView: 'dashboard',
-          isAuthenticated: true,
-          userProfile,
-          quizzes: userData.quizzes,
-          attempts: userData.attempts,
-          flashcards: userData.flashcards,
-          aiExplanations: userData.aiExplanations,
-        }
+      const parsed = JSON.parse(currentUserStr)
+      if (parsed && parsed.email) {
+        userProfile = parsed
+        isAuthenticated = true
+        userData = loadUserData(parsed.email)
       }
     } catch (e) {
       console.error('Error parsing restored user session:', e)
     }
   }
 
+  // Determine initial view based on route URL: / always defaults to landing page
+  let initialView = 'landing'
+  if (pathname.startsWith('/dashboard') && isAuthenticated) {
+    const subPath = pathname.replace('/dashboard', '').replace(/^\//, '')
+    initialView = VIEWS.includes(subPath) && subPath !== 'landing' ? subPath : 'dashboard'
+  }
+
   return {
-    activeView: 'landing',
-    isAuthenticated: false,
-    userProfile: null,
-    quizzes: [],
-    attempts: [],
-    flashcards: [],
-    aiExplanations: {},
+    activeView: initialView,
+    isAuthenticated,
+    userProfile,
+    quizzes: userData.quizzes,
+    attempts: userData.attempts,
+    flashcards: userData.flashcards,
+    aiExplanations: userData.aiExplanations,
   }
 }
 
@@ -309,9 +315,24 @@ export const useQuizStore = create((set, get) => ({
     const { isAuthenticated } = get()
     if (!isAuthenticated && view !== 'landing') {
       set({ activeView: 'landing' })
+      if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+        window.history.pushState({}, '', '/')
+      }
       return
     }
     set({ activeView: view })
+    if (typeof window !== 'undefined') {
+      if (view === 'landing') {
+        if (window.location.pathname !== '/') {
+          window.history.pushState({}, '', '/')
+        }
+      } else {
+        const targetPath = `/dashboard${view === 'dashboard' ? '' : `/${view}`}`
+        if (window.location.pathname !== targetPath) {
+          window.history.pushState({}, '', targetPath)
+        }
+      }
+    }
   },
 
   updateCreatorDraft: (patch) =>
@@ -336,6 +357,9 @@ export const useQuizStore = create((set, get) => ({
         flashcards: userData.flashcards,
         aiExplanations: userData.aiExplanations,
       })
+      if (typeof window !== 'undefined' && window.location.pathname !== '/dashboard') {
+        window.history.pushState({}, '', '/dashboard')
+      }
       return true
     }
     return false
@@ -353,6 +377,9 @@ export const useQuizStore = create((set, get) => ({
       flashcards: [],
       aiExplanations: {},
     })
+    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+      window.history.pushState({}, '', '/')
+    }
   },
 
   generateQuizWithGemini: async (sourceText, questionCount) => {

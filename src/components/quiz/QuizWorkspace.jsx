@@ -9,6 +9,8 @@ import {
 } from 'lucide-react'
 import { useQuizStore } from '../../context/QuizStore'
 import AntiCheatModal from './AntiCheatModal'
+import ExportButtons from './ExportButtons'
+import FormattedText from '../common/FormattedText'
 
 function ProgressRing({ value, total }) {
   const percent = total === 0 ? 0 : Math.round((value / total) * 100)

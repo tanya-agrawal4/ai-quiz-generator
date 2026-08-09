@@ -24,41 +24,58 @@ const VIEW_MAP = {
 export default function App() {
   const activeView = useQuizStore((state) => state.activeView)
   const isAuthenticated = useQuizStore((state) => state.isAuthenticated)
-  const setView = useQuizStore((state) => state.setView)
 
   const [sharedDocId, setSharedDocId] = useState(null)
 
+  // Listen to popstate (browser back/forward navigation) & sync URL routes
   useEffect(() => {
-    try {
-      // Check if the current URL has a shared quiz route: /test/[unique-id] or ?test=[unique-id]
-      const pathname = window.location.pathname
-      const searchParams = new URLSearchParams(window.location.search)
-      
-      let id = null
-      if (pathname?.startsWith('/test/')) {
-        id = pathname.split('/test/')[1]?.split('/')[0]
-      } else if (searchParams?.has('test')) {
-        id = searchParams.get('test')
-      }
+    const handleUrlSync = () => {
+      try {
+        const pathname = window.location.pathname
+        const searchParams = new URLSearchParams(window.location.search)
 
-      if (id) {
-        console.log('[App Router] Intercepting shared quiz route with Document ID:', id)
-        setSharedDocId(id)
-      }
-    } catch (err) {
-      console.error('Detailed Error:', err)
-    }
-  }, [])
+        // 1. Shared Quiz Test Interceptor
+        let id = null
+        if (pathname?.startsWith('/test/')) {
+          id = pathname.split('/test/')[1]?.split('/')[0]
+        } else if (searchParams?.has('test')) {
+          id = searchParams.get('test')
+        }
 
-  useEffect(() => {
-    try {
-      if (!isAuthenticated && activeView !== 'landing' && !sharedDocId) {
-        setView('landing')
+        if (id) {
+          setSharedDocId(id)
+          return
+        }
+        setSharedDocId(null)
+
+        // 2. Base Route (/) vs Protected Route (/dashboard)
+        if (pathname === '/' || pathname === '') {
+          useQuizStore.setState({ activeView: 'landing' })
+        } else if (pathname.startsWith('/dashboard')) {
+          const authState = useQuizStore.getState().isAuthenticated
+          if (authState) {
+            const subPath = pathname.replace('/dashboard', '').replace(/^\//, '')
+            const targetView = VIEW_MAP[subPath] && subPath !== 'landing' ? subPath : 'dashboard'
+            useQuizStore.setState({ activeView: targetView })
+          } else {
+            // Unauthenticated attempt to access /dashboard -> Redirect to /
+            window.history.replaceState({}, '', '/')
+            useQuizStore.setState({ activeView: 'landing' })
+          }
+        } else {
+          // Fallback unknown routes to Landing page
+          window.history.replaceState({}, '', '/')
+          useQuizStore.setState({ activeView: 'landing' })
+        }
+      } catch (err) {
+        console.error('URL Sync Error:', err)
       }
-    } catch (err) {
-      console.error('Detailed Error:', err)
     }
-  }, [isAuthenticated, activeView, setView, sharedDocId])
+
+    handleUrlSync()
+    window.addEventListener('popstate', handleUrlSync)
+    return () => window.removeEventListener('popstate', handleUrlSync)
+  }, [isAuthenticated])
 
   // 0. Dynamic Route Interceptor: If student/friend opens /test/[id] link, display TakeSharedTest directly
   if (sharedDocId) {
@@ -70,6 +87,7 @@ export default function App() {
             try {
               window.history.pushState({}, '', '/')
               setSharedDocId(null)
+              useQuizStore.setState({ activeView: 'landing' })
             } catch (err) {
               console.error('Detailed Error:', err)
               window.location.href = '/'
@@ -80,8 +98,8 @@ export default function App() {
     )
   }
 
-  // 1. Route Security Gate: Intercept unauthenticated sessions completely
-  if (activeView === 'landing' || !isAuthenticated) {
+  // 1. Base Route (/) or Landing View: MUST ONLY render the Landing Page
+  if (activeView === 'landing' || window.location.pathname === '/') {
     return (
       <ErrorBoundary>
         <LandingPage />
@@ -89,14 +107,26 @@ export default function App() {
     )
   }
 
-  // 2. Safe Fallback resolution for protected views
+  // 2. Route Security Gate: Intercept unauthenticated access to protected /dashboard
+  if (!isAuthenticated) {
+    if (window.location.pathname !== '/') {
+      window.history.replaceState({}, '', '/')
+    }
+    return (
+      <ErrorBoundary>
+        <LandingPage />
+      </ErrorBoundary>
+    )
+  }
+
+  // 3. Render Protected Dashboard Layout
   const ActivePanel = VIEW_MAP[activeView] || Dashboard
 
   return (
     <ErrorBoundary>
       <div className="min-h-svh bg-muted text-ink">
         <div className="mx-auto flex min-h-svh max-w-[1440px]">
-          {/* Sidebar and Main layout frames now only render when properly authenticated */}
+          {/* Sidebar and Main layout render for authenticated /dashboard routes */}
           <Sidebar />
           <main className="flex-1 overflow-y-auto px-8 py-8 lg:px-10">
             <ActivePanel />

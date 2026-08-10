@@ -13,36 +13,53 @@ import {
 } from 'firebase/firestore'
 
 // Firebase Configuration Object
-// Reads environment variables or falls back to demo project configuration
+// Reads environment variables with .trim() to guard against whitespace issues
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyDemoKeyQuizForgeBaaS2026',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'quizforge-app.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'quizforge-app',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'quizforge-app.appspot.com',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '1029384756',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:1029384756:web:abcd1234efgh5678',
+  apiKey: (import.meta.env.VITE_FIREBASE_API_KEY || '').trim(),
+  authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '').trim(),
+  projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID || '').trim(),
+  storageBucket: (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '').trim(),
+  messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '').trim(),
+  appId: (import.meta.env.VITE_FIREBASE_APP_ID || '').trim(),
 }
 
-// Initialize Firebase App
-const app = initializeApp(firebaseConfig)
+// ─── Debug: Log whether env vars loaded (safe — never logs actual values) ───
+console.log('[Firebase] Config check:', {
+  apiKey: !!firebaseConfig.apiKey,
+  authDomain: !!firebaseConfig.authDomain,
+  projectId: !!firebaseConfig.projectId,
+  storageBucket: !!firebaseConfig.storageBucket,
+  messagingSenderId: !!firebaseConfig.messagingSenderId,
+  appId: !!firebaseConfig.appId,
+})
 
-// Initialize Firestore Instance
-const db = getFirestore(app)
+// Placeholder / demo values that should be treated as "not configured"
+const PLACEHOLDER_VALUES = [
+  'YOUR_FIREBASE_API_KEY_HERE',
+  'AIzaSyDemoKeyQuizForgeBaaS2026',
+  '',
+]
+
+const isConfigured = firebaseConfig.apiKey &&
+  !PLACEHOLDER_VALUES.includes(firebaseConfig.apiKey)
 
 // ─── Firebase Configuration Validation ───────────────────────────────────
 // Warn loudly if Firebase is using fallback/demo credentials
-if (
-  !import.meta.env.VITE_FIREBASE_API_KEY ||
-  import.meta.env.VITE_FIREBASE_API_KEY === 'YOUR_FIREBASE_API_KEY_HERE'
-) {
+if (!isConfigured) {
   console.warn(
-    '%c⚠️ FIREBASE CONFIG MISSING — Using demo fallback credentials. Multiplayer rooms will NOT work!\n' +
+    '%c⚠️ FIREBASE CONFIG MISSING — Multiplayer rooms will NOT work!\n' +
     'Set VITE_FIREBASE_* variables in your .env file with real Firebase project credentials.\n' +
     'See: https://console.firebase.google.com → Project Settings → Your apps → Web config',
     'color: #ff4444; font-weight: bold; font-size: 13px; background: #fff3f3; padding: 8px; border-radius: 4px;'
   )
 }
 // ─────────────────────────────────────────────────────────────────────────
+
+// Initialize Firebase App
+const app = initializeApp(firebaseConfig)
+
+// Initialize Firestore Instance
+const db = getFirestore(app)
 
 export {
   db,
@@ -55,4 +72,5 @@ export {
   serverTimestamp,
   collection,
   addDoc,
+  isConfigured,
 }

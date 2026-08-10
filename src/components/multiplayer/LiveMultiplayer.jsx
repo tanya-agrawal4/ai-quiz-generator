@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Users,
   Play,
@@ -43,15 +43,25 @@ export default function LiveMultiplayer() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Stabilize guest userId across re-renders so Firestore participant keys stay consistent
+  const guestIdRef = useRef(`guest_${Math.random().toString(36).slice(2, 8)}`)
   const userId = userProfile?.email
     ? userProfile.email.replace(/[^a-zA-Z0-9]/g, '_')
-    : `guest_${Math.random().toString(36).slice(2, 8)}`
+    : guestIdRef.current
   const userName = userProfile?.name || userProfile?.email || 'Anonymous Player'
+
+  // Sync selectedQuizId when quizzes load asynchronously (e.g. from localStorage)
+  useEffect(() => {
+    if (quizzes.length > 0 && !selectedQuizId) {
+      setSelectedQuizId(quizzes[0].id)
+    }
+  }, [quizzes, selectedQuizId])
 
   // ─── Debug: Firebase connectivity check on component mount ────────────
   useEffect(() => {
     console.log('[Multiplayer] Component mounted. Firebase db instance:', db ? '✅ initialized' : '❌ missing')
     console.log('[Multiplayer] Firebase isConfigured:', isConfigured)
+    console.log('[Multiplayer] Quizzes available:', quizzes.length)
     if (!isConfigured) {
       console.warn('[Multiplayer] ⚠️ Firebase credentials are placeholder/missing. Hosting and joining rooms will fail.')
     }
@@ -141,7 +151,9 @@ export default function LiveMultiplayer() {
       setMode('room')
     } catch (err) {
       console.error('[Multiplayer Host Fault] Error creating room:', err)
-      setError('Failed to initialize room document. Check connection.')
+      const errorMsg = `Failed to create room: ${err.message || 'Check connection and Firestore rules.'}`
+      setError(errorMsg)
+      alert(errorMsg)
     } finally {
       setLoading(false)
     }
@@ -197,7 +209,9 @@ export default function LiveMultiplayer() {
       setMode('room')
     } catch (err) {
       console.error('[Multiplayer Join Fault] Error joining room:', err)
-      setError('Failed to join room. Verify the code and try again.')
+      const errorMsg = `Failed to join room: ${err.message || 'Verify the code and try again.'}`
+      setError(errorMsg)
+      alert(errorMsg)
     } finally {
       setLoading(false)
     }

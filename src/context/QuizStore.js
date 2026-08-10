@@ -90,8 +90,11 @@ function normalizeQuestion(raw, index) {
   } else if (questionType === 'TRUE_FALSE') {
     options = Array.isArray(raw.options) && raw.options.length === 2 ? raw.options : ['True', 'False']
   } else {
-    // SHORT_ANSWER
-    options = []
+    // Fallback: treat unknown types as MCQ
+    options = Array.isArray(raw.options) ? raw.options.slice(0, 4) : []
+    while (options.length < 4) {
+      options.push(`Option ${options.length + 1}`)
+    }
   }
 
   const correctIndex =
@@ -388,10 +391,9 @@ export const useQuizStore = create((set, get) => ({
       throw new Error('Gemini API key is not configured. Please check your .env file.')
     }
 
-    const mcqCount = Math.round(questionCount * 0.40)
-    const fillBlankCount = Math.round(questionCount * 0.20)
-    const trueFalseCount = Math.round(questionCount * 0.20)
-    const shortAnswerCount = questionCount - (mcqCount + fillBlankCount + trueFalseCount)
+    const mcqCount = Math.round(questionCount * 0.50)
+    const fillBlankCount = Math.round(questionCount * 0.25)
+    const trueFalseCount = questionCount - (mcqCount + fillBlankCount)
 
     const promptText = `
 You are an expert educational assessment generator. Your task is to generate exactly ${questionCount} questions based on the following text content:
@@ -406,23 +408,19 @@ You must strictly adhere to the following rules:
    - MCQ (Multiple Choice Questions): ${mcqCount} questions.
    - FILL_BLANK (Fill in the Blanks): ${fillBlankCount} questions.
    - TRUE_FALSE (True or False): ${trueFalseCount} questions.
-   - SHORT_ANSWER (Short Answer): ${shortAnswerCount} questions.
-3. Every question must be strictly derived from and based on the provided text content. Do not include external knowledge or facts not present in or inferable from the text.
-4. Avoid copy-pasting complete sentences from the text. Phrase questions in your own words.
-5. Some questions must require logical inference or deduction from the text rather than just simple recall.
-6. Avoid trivial, one-word answer questions (especially for Short Answer and MCQ).
-7. For MCQ and FILL_BLANK questions:
+3. Do NOT generate any short answer, fill-in-the-blank text-input, or subjective/open-ended questions. Every question MUST have selectable options.
+4. Every question must be strictly derived from and based on the provided text content. Do not include external knowledge or facts not present in or inferable from the text.
+5. Avoid copy-pasting complete sentences from the text. Phrase questions in your own words.
+6. Some questions must require logical inference or deduction from the text rather than just simple recall.
+7. Avoid trivial, one-word answer questions.
+8. For MCQ and FILL_BLANK questions:
    - Provide exactly 4 options.
    - Set 'correctIndex' to the 0-based index of the correct option.
    - Set 'correctAnswer' to an empty string.
-8. For TRUE_FALSE questions:
+9. For TRUE_FALSE questions:
    - Provide exactly 2 options: ["True", "False"].
    - Set 'correctIndex' to 0 if True is correct, or 1 if False is correct.
    - Set 'correctAnswer' to an empty string.
-9. For SHORT_ANSWER questions:
-   - Provide an empty array for options.
-   - Set 'correctIndex' to 0.
-   - Set 'correctAnswer' to the correct answer string.
 10. Ensure the format matches the JSON schema exactly.
 `.trim()
 
@@ -456,7 +454,7 @@ You must strictly adhere to the following rules:
                     type: 'OBJECT',
                     properties: {
                       prompt: { type: 'STRING' },
-                      questionType: { type: 'STRING', enum: ['MCQ', 'FILL_BLANK', 'TRUE_FALSE', 'SHORT_ANSWER'] },
+                      questionType: { type: 'STRING', enum: ['MCQ', 'FILL_BLANK', 'TRUE_FALSE'] },
                       options: {
                         type: 'ARRAY',
                         items: { type: 'STRING' },

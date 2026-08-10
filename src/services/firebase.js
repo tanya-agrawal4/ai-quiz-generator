@@ -33,15 +33,8 @@ console.log('[Firebase] Config check:', {
   appId: !!firebaseConfig.appId,
 })
 
-// Placeholder / demo values that should be treated as "not configured"
-const PLACEHOLDER_VALUES = [
-  'YOUR_FIREBASE_API_KEY_HERE',
-  'AIzaSyDemoKeyQuizForgeBaaS2026',
-  '',
-]
-
-const isConfigured = firebaseConfig.apiKey &&
-  !PLACEHOLDER_VALUES.includes(firebaseConfig.apiKey)
+// Firebase is considered configured if a non-empty API key is present
+const isConfigured = !!firebaseConfig.apiKey
 
 // ─── Firebase Configuration Validation ───────────────────────────────────
 // Warn loudly if Firebase is using fallback/demo credentials

@@ -54,7 +54,6 @@ export default function LiveMultiplayer() {
     console.log('[Multiplayer] Firebase isConfigured:', isConfigured)
     if (!isConfigured) {
       console.warn('[Multiplayer] ⚠️ Firebase credentials are placeholder/missing. Hosting and joining rooms will fail.')
-      setError('Firebase is not configured. Add real VITE_FIREBASE_* credentials to your .env file and restart the dev server.')
     }
   }, [])
 

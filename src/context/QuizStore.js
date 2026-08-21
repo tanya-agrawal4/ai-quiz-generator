@@ -353,6 +353,10 @@ export const useQuizStore = create((set, get) => ({
 
   loginUser: async (email, password, mode = 'login') => {
     if (!email || !password) return false
+    if (!auth) {
+      console.error('[Auth] Firebase Auth is not initialized. Check your VITE_FIREBASE_* environment variables.')
+      return false
+    }
     try {
       let userCredential
       if (mode === 'signup') {
@@ -392,7 +396,7 @@ export const useQuizStore = create((set, get) => ({
 
   logoutUser: async () => {
     try {
-      await signOut(auth)
+      if (auth) await signOut(auth)
     } catch (err) {
       console.error('[Auth] Sign-out error:', err)
     }
@@ -415,6 +419,13 @@ export const useQuizStore = create((set, get) => ({
 
   /** Subscribe to Firebase onAuthStateChanged — call once at app startup */
   initAuthListener: () => {
+    // Guard: if Firebase Auth failed to initialize (missing env vars),
+    // skip the listener and just clear the loading state.
+    if (!auth) {
+      console.warn('[Auth] Firebase Auth not available — skipping auth listener.')
+      set({ authLoading: false })
+      return () => {} // no-op unsubscribe
+    }
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         const userProfile = {

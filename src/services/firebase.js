@@ -57,22 +57,40 @@ if (!isConfigured) {
 }
 // ─────────────────────────────────────────────────────────────────────────
 
-// Initialize Firebase App
-const app = initializeApp(firebaseConfig)
+// ─── Safe Firebase Initialization ────────────────────────────────────────
+// When VITE_FIREBASE_API_KEY is missing (e.g. on Vercel without env vars),
+// initializeAuth throws a fatal synchronous 'auth/invalid-api-key' error
+// that crashes the entire module import chain and prevents React from
+// mounting (White Screen of Death). We wrap everything in try-catch so the
+// app degrades gracefully — auth/multiplayer features become unavailable
+// but the rest of the UI still renders.
+let app = null
+let db = null
+let auth = null
 
-// Initialize Firestore Instance
-const db = getFirestore(app)
-
-// Initialize Firebase Auth Instance (with HMR-safe fallback)
-let auth
 try {
-  auth = initializeAuth(app, {
-    persistence: browserLocalPersistence,
-  })
-} catch {
-  // During Vite HMR, auth may already be initialized — use getAuth as fallback
-  auth = getAuth(app)
+  // Initialize Firebase App
+  app = initializeApp(firebaseConfig)
+
+  // Initialize Firestore Instance
+  db = getFirestore(app)
+
+  // Initialize Firebase Auth Instance (with HMR-safe fallback)
+  try {
+    auth = initializeAuth(app, {
+      persistence: browserLocalPersistence,
+    })
+  } catch {
+    // During Vite HMR, auth may already be initialized — use getAuth as fallback
+    auth = getAuth(app)
+  }
+} catch (err) {
+  console.error(
+    '[Firebase] ❌ Fatal initialization error — Firebase features will be unavailable:',
+    err.message || err
+  )
 }
+// ─────────────────────────────────────────────────────────────────────────
 
 export {
   db,
@@ -92,3 +110,4 @@ export {
   createUserWithEmailAndPassword,
   signOut,
 }
+

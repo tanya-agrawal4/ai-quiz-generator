@@ -37,22 +37,18 @@ function TypewriterHero() {
     let timer
 
     if (!isDeleting && currentText.length < targetPhrase.length) {
-      // Typing forward
       timer = setTimeout(() => {
         setCurrentText(targetPhrase.slice(0, currentText.length + 1))
       }, 70)
     } else if (!isDeleting && currentText.length === targetPhrase.length) {
-      // Pause at full word
       timer = setTimeout(() => {
         setIsDeleting(true)
       }, 2200)
     } else if (isDeleting && currentText.length > 0) {
-      // Deleting back
       timer = setTimeout(() => {
         setCurrentText(targetPhrase.slice(0, currentText.length - 1))
       }, 40)
     } else if (isDeleting && currentText.length === 0) {
-      // Move to next phrase
       setIsDeleting(false)
       setPhraseIndex((prev) => (prev + 1) % TYPEWRITER_PHRASES.length)
     }
@@ -62,18 +58,51 @@ function TypewriterHero() {
 
   return (
     <div className="inline-flex items-center">
-      <span className="bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
+      <span className="text-accent">
         {currentText}
       </span>
-      <span className="ml-1 inline-block h-10 w-1 bg-indigo-400 animate-pulse" />
+      <span className="ml-1 inline-block h-10 w-1 bg-accent animate-pulse rounded-full" />
     </div>
   )
 }
+
+/* ─── Feature card data ─── */
+const FEATURES = [
+  {
+    icon: BrainCircuit,
+    title: 'Gemini AI Generator',
+    description: 'Generates custom MCQ, Fill-in-blanks, True/False, and Short Answer questions.',
+    accent: 'text-accent',
+    accentBg: 'bg-accent-soft',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Strict Anti-Cheat',
+    description: 'Monitors tab switches, fullscreen escapes, and context menus for exam integrity.',
+    accent: 'text-purple-600',
+    accentBg: 'bg-purple-50',
+  },
+  {
+    icon: Users,
+    title: 'Live Multiplayer Arena',
+    description: 'Host live real-time quiz matches with synchronized live leaderboards.',
+    accent: 'text-emerald-600',
+    accentBg: 'bg-emerald-50',
+  },
+  {
+    icon: FileText,
+    title: 'Quiz Sharing & Export',
+    description: 'Share via Firestore unique links or download as PDF / CSV assessments.',
+    accent: 'text-rose-600',
+    accentBg: 'bg-rose-50',
+  },
+]
 
 export default function LandingPage() {
   const loginUser = useQuizStore((state) => state.loginUser)
   const setView = useQuizStore((state) => state.setView)
   const isAuthenticated = useQuizStore((state) => state.isAuthenticated)
+  const authLoading = useQuizStore((state) => state.authLoading)
 
   // Auth Modal State
   const [authModalOpen, setAuthModalOpen] = useState(false)
@@ -93,23 +122,49 @@ export default function LandingPage() {
       return
     }
 
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.')
+      return
+    }
+
     setIsLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 600))
+    try {
+      const success = await loginUser(email, password, authMode)
 
-    const success = loginUser(email, password)
-    setIsLoading(false)
-
-    if (success) {
-      setAuthModalOpen(false)
-      setView('dashboard')
-    } else {
-      setError('Authentication failed. Please check your credentials.')
+      if (success) {
+        setAuthModalOpen(false)
+        setView('dashboard')
+      } else {
+        setError(
+          authMode === 'signup'
+            ? 'Could not create account. Email may already be in use.'
+            : 'Invalid email or password. Please try again.'
+        )
+      }
+    } catch {
+      setError('An unexpected error occurred. Please try again.')
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const handleDemoLogin = () => {
-    loginUser('user@quizforge.ai', 'demoPass123')
-    setView('dashboard')
+  const handleDemoLogin = async () => {
+    // Demo login uses Firebase Auth — creates or signs in a demo account
+    setIsLoading(true)
+    try {
+      // Try login first, fall back to signup for first-time demo users
+      let success = await loginUser('user@quizforge.ai', 'demoPass123', 'login')
+      if (!success) {
+        success = await loginUser('user@quizforge.ai', 'demoPass123', 'signup')
+      }
+      if (success) {
+        setView('dashboard')
+      }
+    } catch {
+      // Silently handle — demo login is best-effort
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleCtaClick = () => {
@@ -122,24 +177,19 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans relative overflow-hidden flex flex-col justify-between select-none">
-      {/* Background Ambient Mesh & Grid Overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f293715_1px,transparent_1px),linear-gradient(to_bottom,#1f293715_1px,transparent_1px)] bg-[size:4rem_4rem] pointer-events-none" />
-      <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] bg-purple-600/15 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute -bottom-40 left-1/3 w-[600px] h-[600px] bg-blue-600/15 rounded-full blur-[140px] pointer-events-none" />
+    <div className="min-h-screen bg-muted font-sans relative flex flex-col justify-between select-none">
 
-      {/* 1. Header / Navbar */}
-      <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-slate-950/60 border-b border-white/10 transition-all">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-10">
+      {/* ═══════════════ Header / Navbar ═══════════════ */}
+      <header className="sticky top-0 z-40 w-full bg-surface border-b border-border shadow-sm transition-all">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-10">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 shadow-lg shadow-indigo-500/30">
-              <Sparkles className="h-5 w-5 text-white" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-white">
+              <Sparkles className="h-4.5 w-4.5" />
             </div>
             <div className="flex items-center gap-2 text-left">
-              <span className="text-xl font-bold tracking-tight text-white">QuizForge</span>
-              <span className="rounded-full bg-indigo-500/20 px-2.5 py-0.5 text-[10px] font-semibold text-indigo-300 border border-indigo-400/20 uppercase tracking-wide">
+              <span className="text-lg font-bold tracking-tight text-ink">QuizForge</span>
+              <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[10px] font-semibold text-accent border border-indigo-200 uppercase tracking-wide">
                 AI v2.5
               </span>
             </div>
@@ -147,11 +197,17 @@ export default function LandingPage() {
 
           {/* Auth Action Buttons */}
           <div className="flex items-center gap-3">
-            {isAuthenticated ? (
+            {authLoading ? (
+              /* Placeholder while Firebase Auth initializes — prevents flicker */
+              <div className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-5 py-2.5">
+                <Loader2 className="h-4 w-4 animate-spin text-subtle" />
+                <span className="text-sm text-subtle font-medium">Loading…</span>
+              </div>
+            ) : isAuthenticated ? (
               <button
                 type="button"
                 onClick={() => setView('dashboard')}
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:from-indigo-600 hover:to-purple-700 transition transform hover:scale-105"
+                className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-600 transition"
               >
                 <span>Go to Dashboard</span>
                 <ArrowRight className="h-4 w-4" />
@@ -165,7 +221,7 @@ export default function LandingPage() {
                     setError('')
                     setAuthModalOpen(true)
                   }}
-                  className="rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-white hover:border-white/40 hover:bg-white/10 transition"
+                  className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-medium text-ink hover:bg-muted transition"
                 >
                   Login
                 </button>
@@ -177,7 +233,7 @@ export default function LandingPage() {
                     setError('')
                     setAuthModalOpen(true)
                   }}
-                  className="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:from-indigo-600 hover:to-purple-700 transition transform hover:scale-105"
+                  className="rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-600 transition"
                 >
                   Sign Up
                 </button>
@@ -187,22 +243,22 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* 2. Hero Section (Center Typewriter Animation & CTA) */}
-      <main className="my-auto py-16 px-6 lg:px-10 text-center max-w-5xl mx-auto space-y-8 z-10">
+      {/* ═══════════════ Hero Section ═══════════════ */}
+      <main className="my-auto py-20 px-6 lg:px-10 text-center max-w-5xl mx-auto space-y-8 z-10">
         {/* Pill Badge */}
-        <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-4 py-1.5 text-xs font-semibold text-indigo-300 backdrop-blur-md">
-          <Zap className="h-3.5 w-3.5 text-indigo-400 animate-pulse" />
+        <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-accent-soft px-4 py-1.5 text-xs font-semibold text-accent">
+          <Zap className="h-3.5 w-3.5 text-accent" />
           <span>Next-Gen Assessment & Proctoring System</span>
         </div>
 
         {/* Dynamic Typewriter Title */}
-        <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-tight">
+        <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-tight text-ink">
           Experience the <br className="hidden sm:inline" />
           <TypewriterHero />
         </h1>
 
         {/* Subtitle */}
-        <p className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl text-slate-300 font-normal leading-relaxed">
+        <p className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl text-subtle font-normal leading-relaxed">
           Instantly transform study notes, code repositories, or reference PDFs into diagnostic quizzes with real-time anti-cheat proctoring and live multiplayer arenas.
         </p>
 
@@ -211,7 +267,7 @@ export default function LandingPage() {
           <button
             type="button"
             onClick={handleCtaClick}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-600 to-indigo-600 px-8 py-4 text-base font-bold text-white shadow-[0_0_35px_rgba(99,102,241,0.4)] hover:shadow-[0_0_50px_rgba(99,102,241,0.6)] transition-all transform hover:scale-105 group"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-accent px-8 py-4 text-base font-bold text-white shadow-md hover:bg-indigo-600 hover:shadow-lg transition-all group"
           >
             <Sparkles className="h-5 w-5" />
             <span>{isAuthenticated ? 'Go to Dashboard' : 'Get Started'}</span>
@@ -221,79 +277,60 @@ export default function LandingPage() {
           <button
             type="button"
             onClick={handleDemoLogin}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 px-7 py-4 text-base font-semibold text-white hover:bg-white/10 hover:border-white/30 transition backdrop-blur-md"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-surface px-7 py-4 text-base font-semibold text-ink shadow-sm hover:bg-muted transition"
           >
             <span>Try Demo Account</span>
           </button>
         </div>
 
         {/* Features Preview Cards */}
-        <div className="pt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 text-left">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md space-y-2 hover:border-indigo-500/40 transition">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-400">
-              <BrainCircuit className="h-5 w-5" />
+        <div className="pt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4 text-left">
+          {FEATURES.map(({ icon: Icon, title, description, accent, accentBg }) => (
+            <div
+              key={title}
+              className="rounded-2xl border border-border bg-surface p-6 shadow-sm space-y-3 hover:shadow-md hover:border-gray-300 transition-all"
+            >
+              <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${accentBg} ${accent}`}>
+                <Icon className="h-5 w-5" />
+              </div>
+              <h3 className="text-sm font-bold text-ink">{title}</h3>
+              <p className="text-xs text-subtle leading-relaxed">{description}</p>
             </div>
-            <h3 className="text-base font-bold text-white">Gemini AI Generator</h3>
-            <p className="text-xs text-slate-400">Generates custom MCQ, Fill-in-blanks, True/False, and Short Answer questions.</p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md space-y-2 hover:border-purple-500/40 transition">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/20 text-purple-400">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-            <h3 className="text-base font-bold text-white">Strict Anti-Cheat</h3>
-            <p className="text-xs text-slate-400">Monitors tab switches, fullscreen escapes, and context menus for exam integrity.</p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md space-y-2 hover:border-emerald-500/40 transition">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400">
-              <Users className="h-5 w-5" />
-            </div>
-            <h3 className="text-base font-bold text-white">Live Multiplayer Arena</h3>
-            <p className="text-xs text-slate-400">Host live real-time quiz matches with synchronized live leaderboards.</p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md space-y-2 hover:border-pink-500/40 transition">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-pink-500/20 text-pink-400">
-              <FileText className="h-5 w-5" />
-            </div>
-            <h3 className="text-base font-bold text-white">Quiz Sharing & Export</h3>
-            <p className="text-xs text-slate-400">Share via Firestore unique links or download as PDF / CSV assessments.</p>
-          </div>
+          ))}
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="w-full border-t border-white/10 py-6 text-center text-xs text-slate-500 z-10">
+      {/* ═══════════════ Footer ═══════════════ */}
+      <footer className="w-full border-t border-border bg-surface py-5 text-center text-xs text-subtle z-10">
         <div className="mx-auto flex max-w-7xl flex-col sm:flex-row items-center justify-between px-6 gap-2">
           <p>&copy; 2026 QuizForge AI Testing Ecosystem. All rights reserved.</p>
           <div className="flex items-center gap-4">
-            <span className="inline-flex items-center gap-1.5 text-emerald-400">
+            <span className="inline-flex items-center gap-1.5 text-success font-medium">
               <CheckCircle2 className="h-3.5 w-3.5" /> All Services Operational
             </span>
           </div>
         </div>
       </footer>
 
-      {/* 3. Authentication Modal (Login / Sign Up) */}
+      {/* ═══════════════ Authentication Modal ═══════════════ */}
       {authModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md rounded-3xl border border-white/15 bg-slate-900 p-8 shadow-2xl text-left space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40">
+          <div className="relative w-full max-w-md rounded-2xl border border-border bg-surface p-8 shadow-xl text-left space-y-6">
             {/* Close Button */}
             <button
               type="button"
               onClick={() => setAuthModalOpen(false)}
-              className="absolute right-6 top-6 rounded-full p-2 text-slate-400 hover:bg-white/10 hover:text-white transition"
+              className="absolute right-5 top-5 rounded-lg p-2 text-subtle hover:bg-muted hover:text-ink transition"
             >
               <X className="h-5 w-5" />
             </button>
 
             {/* Header */}
             <div className="space-y-1 pr-8">
-              <h2 className="text-2xl font-bold text-white">
+              <h2 className="text-2xl font-bold text-ink">
                 {authMode === 'login' ? 'Welcome Back' : 'Create Account'}
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-sm text-subtle">
                 {authMode === 'login'
                   ? 'Sign in to access your AI quiz workspace.'
                   : 'Get started with your free QuizForge account.'}
@@ -301,12 +338,12 @@ export default function LandingPage() {
             </div>
 
             {/* Autofill Demo User Shortcut */}
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3 flex items-center justify-between text-xs">
-              <span className="text-slate-300 font-medium">Testing out QuizForge?</span>
+            <div className="rounded-xl border border-border bg-muted p-3 flex items-center justify-between text-xs">
+              <span className="text-subtle font-medium">Testing out QuizForge?</span>
               <button
                 type="button"
                 onClick={handleDemoLogin}
-                className="rounded-lg bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-500 transition"
+                className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-600 transition"
               >
                 One-Click Demo Login
               </button>
@@ -315,40 +352,40 @@ export default function LandingPage() {
             {/* Auth Form */}
             <form onSubmit={handleAuthSubmit} className="space-y-4">
               <label className="block space-y-1.5">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                <span className="text-xs font-semibold uppercase tracking-wide text-subtle">
                   Email Address
                 </span>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                  <Mail className="absolute left-3.5 top-3 h-4 w-4 text-subtle" />
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="user@example.com"
-                    className="w-full rounded-xl border border-white/15 bg-slate-800/80 pl-10 pr-4 py-2.5 text-sm text-white outline-none ring-indigo-500/50 focus:ring-2"
+                    className="w-full rounded-xl border border-border bg-muted pl-10 pr-4 py-2.5 text-sm text-ink outline-none ring-accent/40 focus:ring-2 focus:border-accent transition"
                   />
                 </div>
               </label>
 
               <label className="block space-y-1.5">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                <span className="text-xs font-semibold uppercase tracking-wide text-subtle">
                   Password
                 </span>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                  <Lock className="absolute left-3.5 top-3 h-4 w-4 text-subtle" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-xl border border-white/15 bg-slate-800/80 pl-10 pr-10 py-2.5 text-sm text-white outline-none ring-indigo-500/50 focus:ring-2"
+                    className="w-full rounded-xl border border-border bg-muted pl-10 pr-10 py-2.5 text-sm text-ink outline-none ring-accent/40 focus:ring-2 focus:border-accent transition"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-3 text-slate-400 hover:text-white"
+                    className="absolute right-3.5 top-3 text-subtle hover:text-ink transition"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -356,7 +393,7 @@ export default function LandingPage() {
               </label>
 
               {error && (
-                <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400 font-semibold">
+                <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-danger font-semibold">
                   <AlertCircle className="h-4 w-4 shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -365,7 +402,7 @@ export default function LandingPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-3 text-sm font-bold text-white shadow-lg hover:from-indigo-600 hover:to-purple-700 transition disabled:opacity-50"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-accent py-3 text-sm font-bold text-white shadow-sm hover:bg-indigo-600 transition disabled:opacity-50"
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -376,14 +413,14 @@ export default function LandingPage() {
             </form>
 
             {/* Mode Switcher */}
-            <div className="text-center text-xs text-slate-400 pt-2 border-t border-white/10">
+            <div className="text-center text-xs text-subtle pt-3 border-t border-border">
               {authMode === 'login' ? (
                 <p>
                   Don't have an account?{' '}
                   <button
                     type="button"
                     onClick={() => setAuthMode('signup')}
-                    className="font-bold text-indigo-400 hover:underline"
+                    className="font-bold text-accent hover:underline"
                   >
                     Sign Up
                   </button>
@@ -394,7 +431,7 @@ export default function LandingPage() {
                   <button
                     type="button"
                     onClick={() => setAuthMode('login')}
-                    className="font-bold text-indigo-400 hover:underline"
+                    className="font-bold text-accent hover:underline"
                   >
                     Login
                   </button>

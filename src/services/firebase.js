@@ -11,6 +11,15 @@ import {
   collection,
   addDoc,
 } from 'firebase/firestore'
+import {
+  initializeAuth,
+  getAuth,
+  browserLocalPersistence,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+} from 'firebase/auth'
 
 // Firebase Configuration Object
 // Reads environment variables with .trim() to guard against whitespace issues
@@ -54,8 +63,20 @@ const app = initializeApp(firebaseConfig)
 // Initialize Firestore Instance
 const db = getFirestore(app)
 
+// Initialize Firebase Auth Instance (with HMR-safe fallback)
+let auth
+try {
+  auth = initializeAuth(app, {
+    persistence: browserLocalPersistence,
+  })
+} catch {
+  // During Vite HMR, auth may already be initialized — use getAuth as fallback
+  auth = getAuth(app)
+}
+
 export {
   db,
+  auth,
   doc,
   setDoc,
   getDoc,
@@ -66,4 +87,8 @@ export {
   collection,
   addDoc,
   isConfigured,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
 }

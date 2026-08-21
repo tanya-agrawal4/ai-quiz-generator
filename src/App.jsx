@@ -10,6 +10,7 @@ import LandingPage from './components/auth/LandingPage'
 import TakeSharedTest from './components/quiz/TakeSharedTest'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import { useQuizStore } from './context/QuizStore'
+import { Loader2 } from 'lucide-react'
 
 const VIEW_MAP = {
   landing: LandingPage,
@@ -24,8 +25,16 @@ const VIEW_MAP = {
 export default function App() {
   const activeView = useQuizStore((state) => state.activeView)
   const isAuthenticated = useQuizStore((state) => state.isAuthenticated)
+  const authLoading = useQuizStore((state) => state.authLoading)
+  const initAuthListener = useQuizStore((state) => state.initAuthListener)
 
   const [sharedDocId, setSharedDocId] = useState(null)
+
+  // Initialize Firebase Auth listener once on app mount
+  useEffect(() => {
+    const unsubscribe = initAuthListener()
+    return () => unsubscribe()
+  }, [initAuthListener])
 
   // Listen to popstate (browser back/forward navigation) & sync URL routes
   useEffect(() => {
@@ -76,6 +85,16 @@ export default function App() {
     window.addEventListener('popstate', handleUrlSync)
     return () => window.removeEventListener('popstate', handleUrlSync)
   }, [isAuthenticated])
+
+  // Show a loading screen while Firebase Auth initializes
+  if (authLoading) {
+    return (
+      <div className="min-h-svh flex flex-col items-center justify-center bg-muted text-ink gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <p className="text-sm text-subtle font-medium">Loading your workspace…</p>
+      </div>
+    )
+  }
 
   // 0. Dynamic Route Interceptor: If student/friend opens /test/[id] link, display TakeSharedTest directly
   if (sharedDocId) {

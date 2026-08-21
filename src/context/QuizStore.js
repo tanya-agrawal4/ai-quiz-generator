@@ -1,6 +1,13 @@
 import { create } from 'zustand'
 import * as pdfjsLib from 'pdfjs-dist'
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
+import {
+  auth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+} from '../services/firebase'
 
 if (pdfjsLib?.GlobalWorkerOptions) {
   pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
@@ -294,6 +301,7 @@ export const useQuizStore = create((set, get) => ({
   activeView: initialState.activeView, 
   isAuthenticated: initialState.isAuthenticated,
   userProfile: initialState.userProfile,
+  authLoading: true,
   isGeneratingQuiz: false,
 
   quizzes: initialState.quizzes,
@@ -343,16 +351,28 @@ export const useQuizStore = create((set, get) => ({
       creatorDraft: { ...state.creatorDraft, ...patch },
     })),
 
-  loginUser: (email, password) => {
-    if (email && password) {
+  loginUser: async (email, password, mode = 'login') => {
+    if (!email || !password) return false
+    try {
+      let userCredential
+      if (mode === 'signup') {
+        userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      } else {
+        userCredential = await signInWithEmailAndPassword(auth, email, password)
+      }
+      // onAuthStateChanged will handle the state update,
+      // but we also do an immediate sync for responsiveness
+      const firebaseUser = userCredential.user
       const userProfile = {
-        name: email.split('@')[0],
-        email: email
+        name: firebaseUser.displayName || email.split('@')[0],
+        email: firebaseUser.email,
+        uid: firebaseUser.uid,
       }
       localStorage.setItem('quiz_app:current_user', JSON.stringify(userProfile))
       const userData = loadUserData(email)
       set({
         isAuthenticated: true,
+        authLoading: false,
         activeView: 'dashboard',
         userProfile,
         quizzes: userData.quizzes,
@@ -364,16 +384,24 @@ export const useQuizStore = create((set, get) => ({
         window.history.pushState({}, '', '/dashboard')
       }
       return true
+    } catch (err) {
+      console.error('[Auth] Login/Signup failed:', err.code, err.message)
+      return false
     }
-    return false
   },
 
-  logoutUser: () => {
+  logoutUser: async () => {
+    try {
+      await signOut(auth)
+    } catch (err) {
+      console.error('[Auth] Sign-out error:', err)
+    }
     localStorage.removeItem('quiz_app:current_user')
     set({
       isAuthenticated: false,
       userProfile: null,
       activeView: 'landing',
+      authLoading: false,
       session: null,
       quizzes: [],
       attempts: [],
@@ -383,6 +411,43 @@ export const useQuizStore = create((set, get) => ({
     if (typeof window !== 'undefined' && window.location.pathname !== '/') {
       window.history.pushState({}, '', '/')
     }
+  },
+
+  /** Subscribe to Firebase onAuthStateChanged — call once at app startup */
+  initAuthListener: () => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        const userProfile = {
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+          email: firebaseUser.email,
+          uid: firebaseUser.uid,
+        }
+        localStorage.setItem('quiz_app:current_user', JSON.stringify(userProfile))
+        const userData = loadUserData(firebaseUser.email)
+        const currentState = useQuizStore.getState()
+        // Only update activeView if user is not already on a valid authenticated view
+        const shouldNavigate = !currentState.isAuthenticated
+        set({
+          isAuthenticated: true,
+          authLoading: false,
+          userProfile,
+          quizzes: userData.quizzes.length > 0 ? userData.quizzes : currentState.quizzes,
+          attempts: userData.attempts.length > 0 ? userData.attempts : currentState.attempts,
+          flashcards: userData.flashcards.length > 0 ? userData.flashcards : currentState.flashcards,
+          aiExplanations: Object.keys(userData.aiExplanations).length > 0 ? userData.aiExplanations : currentState.aiExplanations,
+          ...(shouldNavigate && window.location.pathname === '/' ? {} : {}),
+        })
+      } else {
+        // No user signed in
+        localStorage.removeItem('quiz_app:current_user')
+        set({
+          isAuthenticated: false,
+          authLoading: false,
+          userProfile: null,
+        })
+      }
+    })
+    return unsubscribe
   },
 
   generateQuizWithGemini: async (sourceText, questionCount) => {

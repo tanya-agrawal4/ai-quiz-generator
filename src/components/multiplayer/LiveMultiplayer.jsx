@@ -28,6 +28,29 @@ function generateRoomCode() {
   return String(Math.floor(100000 + Math.random() * 900000))
 }
 
+/**
+ * Race a promise against a timeout. Firebase SDK calls (setDoc, getDoc, etc.)
+ * can hang indefinitely when connectivity or Firestore security rules block the
+ * request – they never reject, they just wait. This wrapper guarantees the UI
+ * recovers within `ms` milliseconds so buttons don't appear "dead".
+ */
+function withTimeout(promise, ms = 10000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(
+        () =>
+          reject(
+            new Error(
+              `Request timed out after ${ms / 1000}s. Check your internet connection and Firestore security rules.`
+            )
+          ),
+        ms
+      )
+    ),
+  ])
+}
+
 export default function LiveMultiplayer() {
   const userProfile = useQuizStore((state) => state.userProfile)
   const quizzes = useQuizStore((state) => state.quizzes)
@@ -145,7 +168,8 @@ export default function LiveMultiplayer() {
 
     try {
       console.log('[Multiplayer] Creating Firestore document for Room Code:', code)
-      await setDoc(doc(db, 'multiplayer_rooms', code), roomPayload)
+      await withTimeout(setDoc(doc(db, 'multiplayer_rooms', code), roomPayload))
+      console.log('[Multiplayer] ✅ Room created successfully:', code)
       setCurrentRoomCode(code)
       setIsHost(true)
       setMode('room')
@@ -176,7 +200,7 @@ export default function LiveMultiplayer() {
 
     try {
       const roomRef = doc(db, 'multiplayer_rooms', cleanCode)
-      const snap = await getDoc(roomRef)
+      const snap = await withTimeout(getDoc(roomRef))
 
       if (!snap.exists()) {
         setError(`Room code "${cleanCode}" does not exist.`)
@@ -200,9 +224,10 @@ export default function LiveMultiplayer() {
         },
       }
 
-      await updateDoc(roomRef, {
+      await withTimeout(updateDoc(roomRef, {
         participants: updatedParticipants,
-      })
+      }))
+      console.log('[Multiplayer] ✅ Joined room successfully:', cleanCode)
 
       setCurrentRoomCode(cleanCode)
       setIsHost(false)

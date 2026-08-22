@@ -84,8 +84,8 @@ const FEATURES = [
   },
   {
     icon: Users,
-    title: 'Live Multiplayer Arena',
-    description: 'Host live real-time quiz matches with synchronized live leaderboards.',
+    title: 'Synchronized Classroom Tests',
+    description: 'Create timed classroom tests with a 6-digit code. All students start together with a global countdown.',
     accent: 'text-emerald-600',
     accentBg: 'bg-emerald-50',
   },
@@ -259,7 +259,7 @@ export default function LandingPage() {
 
         {/* Subtitle */}
         <p className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl text-subtle font-normal leading-relaxed">
-          Instantly transform study notes, code repositories, or reference PDFs into diagnostic quizzes with real-time anti-cheat proctoring and live multiplayer arenas.
+          Instantly transform study notes, code repositories, or reference PDFs into diagnostic quizzes with real-time anti-cheat proctoring and synchronized classroom tests.
         </p>
 
         {/* Call to Action (CTA) Buttons */}

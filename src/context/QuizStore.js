@@ -79,7 +79,7 @@ const SAMPLE_ATTEMPTS = [
   },
 ]
 
-const VIEWS = ['landing', 'dashboard', 'creator', 'quiz', 'review', 'flashcards', 'multiplayer']
+const VIEWS = ['landing', 'dashboard', 'creator', 'quiz', 'review', 'flashcards', 'classroom']
 
 function uid(prefix = 'id') {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`

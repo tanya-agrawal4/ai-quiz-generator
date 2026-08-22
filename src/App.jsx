@@ -5,7 +5,8 @@ import QuizCreator from './components/creator/QuizCreator'
 import QuizWorkspace from './components/quiz/QuizWorkspace'
 import QuizReview from './components/review/QuizReview'
 import FlashcardDeck from './components/flashcards/FlashcardDeck'
-import LiveMultiplayer from './components/multiplayer/LiveMultiplayer'
+import ClassroomTest from './components/classroom/ClassroomTest'
+import TakeClassroomTest from './components/classroom/TakeClassroomTest'
 import LandingPage from './components/auth/LandingPage'
 import TakeSharedTest from './components/quiz/TakeSharedTest'
 import ErrorBoundary from './components/common/ErrorBoundary'
@@ -19,7 +20,7 @@ const VIEW_MAP = {
   quiz: QuizWorkspace,
   review: QuizReview,
   flashcards: FlashcardDeck,
-  multiplayer: LiveMultiplayer,
+  classroom: ClassroomTest,
 }
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
   const initAuthListener = useQuizStore((state) => state.initAuthListener)
 
   const [sharedDocId, setSharedDocId] = useState(null)
+  const [classroomCode, setClassroomCode] = useState(null)
 
   // Initialize Firebase Auth listener once on app mount
   useEffect(() => {
@@ -43,7 +45,16 @@ export default function App() {
         const pathname = window.location.pathname
         const searchParams = new URLSearchParams(window.location.search)
 
-        // 1. Shared Quiz Test Interceptor
+        // 1. Classroom Test Route Interceptor (/classroom or /classroom?code=XXXXXX)
+        if (pathname === '/classroom' || pathname?.startsWith('/classroom')) {
+          const code = searchParams?.get('code') || null
+          setClassroomCode(code || '__join__') // '__join__' = show join form without a pre-filled code
+          setSharedDocId(null)
+          return
+        }
+        setClassroomCode(null)
+
+        // 2. Shared Quiz Test Interceptor
         let id = null
         if (pathname?.startsWith('/test/')) {
           id = pathname.split('/test/')[1]?.split('/')[0]
@@ -96,7 +107,29 @@ export default function App() {
     )
   }
 
-  // 0. Dynamic Route Interceptor: If student/friend opens /test/[id] link, display TakeSharedTest directly
+  // 0a. Classroom Route Interceptor: /classroom or /classroom?code=XXXXXX → TakeClassroomTest
+  if (classroomCode) {
+    const prefilledCode = classroomCode === '__join__' ? undefined : classroomCode
+    return (
+      <ErrorBoundary>
+        <TakeClassroomTest
+          testId={prefilledCode}
+          onExit={() => {
+            try {
+              window.history.pushState({}, '', '/')
+              setClassroomCode(null)
+              useQuizStore.setState({ activeView: 'landing' })
+            } catch (err) {
+              console.error('Detailed Error:', err)
+              window.location.href = '/'
+            }
+          }}
+        />
+      </ErrorBoundary>
+    )
+  }
+
+  // 0b. Dynamic Route Interceptor: If student/friend opens /test/[id] link, display TakeSharedTest directly
   if (sharedDocId) {
     return (
       <ErrorBoundary>

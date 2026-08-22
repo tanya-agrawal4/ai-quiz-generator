@@ -4,12 +4,15 @@ import {
   doc,
   setDoc,
   getDoc,
+  getDocs,
   updateDoc,
   onSnapshot,
   arrayUnion,
   serverTimestamp,
   collection,
   addDoc,
+  query,
+  orderBy,
 } from 'firebase/firestore'
 import {
   initializeAuth,
@@ -49,7 +52,7 @@ const isConfigured = !!firebaseConfig.apiKey
 // Warn loudly if Firebase is using fallback/demo credentials
 if (!isConfigured) {
   console.warn(
-    '%c⚠️ FIREBASE CONFIG MISSING — Multiplayer rooms will NOT work!\n' +
+    '%c⚠️ FIREBASE CONFIG MISSING — Classroom tests and sharing will NOT work!\n' +
     'Set VITE_FIREBASE_* variables in your .env file with real Firebase project credentials.\n' +
     'See: https://console.firebase.google.com → Project Settings → Your apps → Web config',
     'color: #ff4444; font-weight: bold; font-size: 13px; background: #fff3f3; padding: 8px; border-radius: 4px;'
@@ -62,7 +65,7 @@ if (!isConfigured) {
 // initializeAuth throws a fatal synchronous 'auth/invalid-api-key' error
 // that crashes the entire module import chain and prevents React from
 // mounting (White Screen of Death). We wrap everything in try-catch so the
-// app degrades gracefully — auth/multiplayer features become unavailable
+// app degrades gracefully — auth/classroom features become unavailable
 // but the rest of the UI still renders.
 let app = null
 let db = null
@@ -98,12 +101,15 @@ export {
   doc,
   setDoc,
   getDoc,
+  getDocs,
   updateDoc,
   onSnapshot,
   arrayUnion,
   serverTimestamp,
   collection,
   addDoc,
+  query,
+  orderBy,
   isConfigured,
   onAuthStateChanged,
   signInWithEmailAndPassword,

@@ -16,7 +16,7 @@ const NAV_ITEMS = [
   { id: 'quiz', label: 'Take Quiz', icon: PlayCircle },
   { id: 'review', label: 'Review', icon: ClipboardCheck },
   { id: 'flashcards', label: 'Flashcards', icon: Layers3 },
-  { id: 'multiplayer', label: 'Live Multiplayer', icon: Users },
+  { id: 'classroom', label: 'Classroom Test', icon: Users },
 ]
 
 export default function Sidebar() {

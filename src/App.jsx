@@ -7,6 +7,8 @@ import QuizReview from './components/review/QuizReview'
 import FlashcardDeck from './components/flashcards/FlashcardDeck'
 import ClassroomTest from './components/classroom/ClassroomTest'
 import TakeClassroomTest from './components/classroom/TakeClassroomTest'
+import TestDashboard from './components/classroom/TestDashboard'
+import AttemptTest from './components/classroom/AttemptTest'
 import LandingPage from './components/auth/LandingPage'
 import TakeSharedTest from './components/quiz/TakeSharedTest'
 import ErrorBoundary from './components/common/ErrorBoundary'
@@ -31,6 +33,8 @@ export default function App() {
 
   const [sharedDocId, setSharedDocId] = useState(null)
   const [classroomCode, setClassroomCode] = useState(null)
+  const [testDashboardId, setTestDashboardId] = useState(null)
+  const [attemptTestId, setAttemptTestId] = useState(null)
 
   // Initialize Firebase Auth listener once on app mount
   useEffect(() => {
@@ -44,6 +48,32 @@ export default function App() {
       try {
         const pathname = window.location.pathname
         const searchParams = new URLSearchParams(window.location.search)
+
+        // 0. Teacher Dashboard Route Interceptor (/test-dashboard/:testId)
+        if (pathname?.startsWith('/test-dashboard/')) {
+          const dashId = pathname.split('/test-dashboard/')[1]?.split('/')[0]
+          if (dashId) {
+            setTestDashboardId(dashId)
+            setAttemptTestId(null)
+            setClassroomCode(null)
+            setSharedDocId(null)
+            return
+          }
+        }
+        setTestDashboardId(null)
+
+        // 0a. Student Attempt Route Interceptor (/attempt/:testId)
+        if (pathname?.startsWith('/attempt/')) {
+          const aId = pathname.split('/attempt/')[1]?.split('/')[0]
+          if (aId) {
+            setAttemptTestId(aId)
+            setTestDashboardId(null)
+            setClassroomCode(null)
+            setSharedDocId(null)
+            return
+          }
+        }
+        setAttemptTestId(null)
 
         // 1. Classroom Test Route Interceptor (/classroom or /classroom?code=XXXXXX)
         if (pathname === '/classroom' || pathname?.startsWith('/classroom')) {
@@ -104,6 +134,49 @@ export default function App() {
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
         <p className="text-sm text-subtle font-medium">Loading your workspace…</p>
       </div>
+    )
+  }
+
+  // 0-pre. Teacher Dashboard Route: /test-dashboard/:testId (requires auth)
+  if (testDashboardId) {
+    return (
+      <ErrorBoundary>
+        <TestDashboard
+          testId={testDashboardId}
+          onExit={() => {
+            try {
+              window.history.pushState({}, '', '/dashboard')
+              setTestDashboardId(null)
+              useQuizStore.setState({ activeView: 'classroom' })
+              window.dispatchEvent(new PopStateEvent('popstate'))
+            } catch (err) {
+              console.error('Detailed Error:', err)
+              window.location.href = '/'
+            }
+          }}
+        />
+      </ErrorBoundary>
+    )
+  }
+
+  // 0-pre2. Student Attempt Route: /attempt/:testId (public, no auth required)
+  if (attemptTestId) {
+    return (
+      <ErrorBoundary>
+        <AttemptTest
+          testId={attemptTestId}
+          onExit={() => {
+            try {
+              window.history.pushState({}, '', '/')
+              setAttemptTestId(null)
+              useQuizStore.setState({ activeView: 'landing' })
+            } catch (err) {
+              console.error('Detailed Error:', err)
+              window.location.href = '/'
+            }
+          }}
+        />
+      </ErrorBoundary>
     )
   }
 

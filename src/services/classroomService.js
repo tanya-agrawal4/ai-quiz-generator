@@ -153,6 +153,7 @@ export async function submitStudentResult(testId, submission) {
     const subCol = collection(db, 'classroom_tests', testId, 'submissions')
     await withTimeout(addDoc(subCol, {
       studentName: submission.studentName || 'Anonymous',
+      rollNumber: submission.rollNumber || '',
       score: submission.score ?? 0,
       totalQuestions: submission.totalQuestions ?? 0,
       submittedAt: new Date().toISOString(),
@@ -245,4 +246,30 @@ export async function checkTestExists(testId) {
   } catch {
     return false
   }
+}
+
+/**
+ * Real-time listener on the submissions subcollection (for teacher leaderboard).
+ * @returns {Function} unsubscribe
+ */
+export function subscribeToSubmissions(testId, callback) {
+  if (!testId || !db) {
+    callback([])
+    return () => {}
+  }
+
+  const colRef = collection(db, 'classroom_tests', testId, 'submissions')
+  return onSnapshot(
+    colRef,
+    (snap) => {
+      const subs = snap.docs.map((d) => d.data())
+      // Sort by score descending
+      subs.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+      callback(subs)
+    },
+    (err) => {
+      console.error('[Classroom] Submissions snapshot error:', err)
+      callback([])
+    }
+  )
 }

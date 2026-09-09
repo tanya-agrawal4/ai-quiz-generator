@@ -13,6 +13,7 @@ import {
   Send,
   Hash,
   User,
+  ShieldCheck,
 } from 'lucide-react'
 import {
   subscribeToTest,
@@ -88,6 +89,7 @@ export default function AttemptTest({ testId, onExit }) {
   const [stage, setStage] = useState('onboarding')
   const [studentName, setStudentName] = useState('')
   const [rollNumber, setRollNumber] = useState('')
+  const [roomCode, setRoomCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -185,6 +187,14 @@ export default function AttemptTest({ testId, onExit }) {
     }
     if (!rollNumber.trim()) {
       setError('Please enter your roll number.')
+      return
+    }
+    if (!roomCode.trim()) {
+      setError('Please enter the Room Code.')
+      return
+    }
+    if (roomCode.trim() !== String(testId).trim()) {
+      setError('Invalid Room Code. Please check with your teacher and try again.')
       return
     }
 
@@ -392,9 +402,27 @@ export default function AttemptTest({ testId, onExit }) {
               </div>
             </label>
 
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-subtle">
+                Room Code <span className="text-danger">*</span>
+              </span>
+              <div className="relative">
+                <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-subtle" />
+                <input
+                  type="text"
+                  value={roomCode}
+                  onChange={(e) => setRoomCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="6-digit code from your teacher"
+                  maxLength={6}
+                  inputMode="numeric"
+                  className="w-full rounded-2xl border border-border bg-surface pl-10 pr-4 py-3.5 text-base font-medium text-ink outline-none ring-accent/20 focus:ring-4 shadow-sm tracking-widest"
+                />
+              </div>
+            </label>
+
             <button
               type="submit"
-              disabled={loading || !studentName.trim() || !rollNumber.trim()}
+              disabled={loading || !studentName.trim() || !rollNumber.trim() || roomCode.length !== 6}
               className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-accent px-6 py-4 text-base font-bold text-white shadow-lg hover:bg-indigo-600 active:scale-[0.98] transition disabled:opacity-40"
             >
               {loading ? (

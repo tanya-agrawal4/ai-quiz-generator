@@ -6,6 +6,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInAnonymously,
   signOut,
 } from '../services/firebase'
 
@@ -352,46 +353,71 @@ export const useQuizStore = create((set, get) => ({
     })),
 
   loginUser: async (email, password, mode = 'login') => {
-    if (!email || !password) return false
+    if (!email || !password) throw new Error('Email and password are required.')
     if (!auth) {
-      console.error('[Auth] Firebase Auth is not initialized. Check your VITE_FIREBASE_* environment variables.')
-      return false
+      throw new Error('Firebase Auth is not initialized. Check your VITE_FIREBASE_* environment variables.')
     }
-    try {
-      let userCredential
-      if (mode === 'signup') {
-        userCredential = await createUserWithEmailAndPassword(auth, email, password)
-      } else {
-        userCredential = await signInWithEmailAndPassword(auth, email, password)
-      }
-      // onAuthStateChanged will handle the state update,
-      // but we also do an immediate sync for responsiveness
-      const firebaseUser = userCredential.user
-      const userProfile = {
-        name: firebaseUser.displayName || email.split('@')[0],
-        email: firebaseUser.email,
-        uid: firebaseUser.uid,
-      }
-      localStorage.setItem('quiz_app:current_user', JSON.stringify(userProfile))
-      const userData = loadUserData(email)
-      set({
-        isAuthenticated: true,
-        authLoading: false,
-        activeView: 'dashboard',
-        userProfile,
-        quizzes: userData.quizzes,
-        attempts: userData.attempts,
-        flashcards: userData.flashcards,
-        aiExplanations: userData.aiExplanations,
-      })
-      if (typeof window !== 'undefined' && window.location.pathname !== '/dashboard') {
-        window.history.pushState({}, '', '/dashboard')
-      }
-      return true
-    } catch (err) {
-      console.error('[Auth] Login/Signup failed:', err.code, err.message)
-      return false
+    let userCredential
+    if (mode === 'signup') {
+      userCredential = await createUserWithEmailAndPassword(auth, email, password)
+    } else {
+      userCredential = await signInWithEmailAndPassword(auth, email, password)
     }
+    // onAuthStateChanged will handle the state update,
+    // but we also do an immediate sync for responsiveness
+    const firebaseUser = userCredential.user
+    const userProfile = {
+      name: firebaseUser.displayName || email.split('@')[0],
+      email: firebaseUser.email,
+      uid: firebaseUser.uid,
+    }
+    localStorage.setItem('quiz_app:current_user', JSON.stringify(userProfile))
+    const userData = loadUserData(email)
+    set({
+      isAuthenticated: true,
+      authLoading: false,
+      activeView: 'dashboard',
+      userProfile,
+      quizzes: userData.quizzes,
+      attempts: userData.attempts,
+      flashcards: userData.flashcards,
+      aiExplanations: userData.aiExplanations,
+    })
+    if (typeof window !== 'undefined' && window.location.pathname !== '/dashboard') {
+      window.history.pushState({}, '', '/dashboard')
+    }
+    return true
+  },
+
+  loginAnonymous: async () => {
+    if (!auth) {
+      throw new Error('Firebase Auth is not initialized. Check your VITE_FIREBASE_* environment variables.')
+    }
+    const userCredential = await signInAnonymously(auth)
+    const firebaseUser = userCredential.user
+    const anonId = firebaseUser.uid.slice(0, 8)
+    const userProfile = {
+      name: `Demo User ${anonId}`,
+      email: `demo-${anonId}@quizforge.local`,
+      uid: firebaseUser.uid,
+      isAnonymous: true,
+    }
+    localStorage.setItem('quiz_app:current_user', JSON.stringify(userProfile))
+    const userData = loadUserData(userProfile.email)
+    set({
+      isAuthenticated: true,
+      authLoading: false,
+      activeView: 'dashboard',
+      userProfile,
+      quizzes: userData.quizzes,
+      attempts: userData.attempts,
+      flashcards: userData.flashcards,
+      aiExplanations: userData.aiExplanations,
+    })
+    if (typeof window !== 'undefined' && window.location.pathname !== '/dashboard') {
+      window.history.pushState({}, '', '/dashboard')
+    }
+    return true
   },
 
   logoutUser: async () => {
@@ -428,13 +454,18 @@ export const useQuizStore = create((set, get) => ({
     }
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
+        // Handle anonymous users (no email) vs email-based users
+        const isAnon = firebaseUser.isAnonymous
+        const anonId = firebaseUser.uid.slice(0, 8)
+        const userEmail = firebaseUser.email || `demo-${anonId}@quizforge.local`
         const userProfile = {
-          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-          email: firebaseUser.email,
+          name: firebaseUser.displayName || (isAnon ? `Demo User ${anonId}` : firebaseUser.email?.split('@')[0] || 'User'),
+          email: userEmail,
           uid: firebaseUser.uid,
+          ...(isAnon && { isAnonymous: true }),
         }
         localStorage.setItem('quiz_app:current_user', JSON.stringify(userProfile))
-        const userData = loadUserData(firebaseUser.email)
+        const userData = loadUserData(userEmail)
         const currentState = useQuizStore.getState()
         // Only update activeView if user is not already on a valid authenticated view
         const shouldNavigate = !currentState.isAuthenticated

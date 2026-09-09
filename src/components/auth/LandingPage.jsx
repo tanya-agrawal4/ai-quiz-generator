@@ -100,6 +100,7 @@ const FEATURES = [
 
 export default function LandingPage() {
   const loginUser = useQuizStore((state) => state.loginUser)
+  const loginAnonymous = useQuizStore((state) => state.loginAnonymous)
   const setView = useQuizStore((state) => state.setView)
   const isAuthenticated = useQuizStore((state) => state.isAuthenticated)
   const authLoading = useQuizStore((state) => state.authLoading)
@@ -112,6 +113,44 @@ export default function LandingPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const getFirebaseErrorMessage = (error) => {
+    const code = error?.code || ''
+    switch (code) {
+      case 'auth/invalid-email':
+        return 'The email address is not valid.'
+      case 'auth/user-disabled':
+        return 'This account has been disabled. Contact support.'
+      case 'auth/user-not-found':
+        return 'No account found with this email. Try signing up instead.'
+      case 'auth/wrong-password':
+        return 'Incorrect password. Please try again.'
+      case 'auth/invalid-credential':
+        return 'Invalid email or password. Please check and try again.'
+      case 'auth/email-already-in-use':
+        return 'An account already exists with this email. Try logging in instead.'
+      case 'auth/weak-password':
+        return 'Password is too weak. Use at least 6 characters.'
+      case 'auth/too-many-requests':
+        return 'Too many failed attempts. Please wait a moment and try again.'
+      case 'auth/network-request-failed':
+        return 'Network error. Check your internet connection.'
+      case 'auth/operation-not-allowed':
+        return 'This sign-in method is not enabled. Contact support.'
+      default:
+        return error?.message || 'An unexpected error occurred. Please try again.'
+    }
+  }
+
+  // Helper to open the modal cleanly with a guaranteed mode
+  const openAuthModal = (mode) => {
+    setAuthMode(mode)
+    setError('')
+    setEmail('')
+    setPassword('')
+    setShowPassword(false)
+    setAuthModalOpen(true)
+  }
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault()
@@ -129,39 +168,33 @@ export default function LandingPage() {
 
     setIsLoading(true)
     try {
-      const success = await loginUser(email, password, authMode)
-
-      if (success) {
-        setAuthModalOpen(false)
-        setView('dashboard')
-      } else {
-        setError(
-          authMode === 'signup'
-            ? 'Could not create account. Email may already be in use.'
-            : 'Invalid email or password. Please try again.'
-        )
+      // Snapshot the current mode at submit time to avoid stale-closure bugs.
+      // authMode === 'login'  → signInWithEmailAndPassword
+      // authMode === 'signup' → createUserWithEmailAndPassword
+      const currentMode = authMode
+      if (currentMode !== 'login' && currentMode !== 'signup') {
+        throw new Error(`Unknown auth mode: "${currentMode}"`)
       }
-    } catch {
-      setError('An unexpected error occurred. Please try again.')
+      await loginUser(email, password, currentMode)
+      setAuthModalOpen(false)
+      setView('dashboard')
+    } catch (err) {
+      setError(getFirebaseErrorMessage(err))
     } finally {
       setIsLoading(false)
     }
   }
 
+  // Try Demo Account — calls signInAnonymously, no email/password needed
   const handleDemoLogin = async () => {
-    // Demo login uses Firebase Auth — creates or signs in a demo account
     setIsLoading(true)
+    setError('')
     try {
-      // Try login first, fall back to signup for first-time demo users
-      let success = await loginUser('user@quizforge.ai', 'demoPass123', 'login')
-      if (!success) {
-        success = await loginUser('user@quizforge.ai', 'demoPass123', 'signup')
-      }
-      if (success) {
-        setView('dashboard')
-      }
-    } catch {
-      // Silently handle — demo login is best-effort
+      await loginAnonymous()
+      setAuthModalOpen(false)
+      setView('dashboard')
+    } catch (err) {
+      setError(getFirebaseErrorMessage(err))
     } finally {
       setIsLoading(false)
     }
@@ -171,8 +204,7 @@ export default function LandingPage() {
     if (isAuthenticated) {
       setView('dashboard')
     } else {
-      setAuthMode('signup')
-      setAuthModalOpen(true)
+      openAuthModal('signup')
     }
   }
 
@@ -216,11 +248,7 @@ export default function LandingPage() {
               <>
                 <button
                   type="button"
-                  onClick={() => {
-                    setAuthMode('login')
-                    setError('')
-                    setAuthModalOpen(true)
-                  }}
+                  onClick={() => openAuthModal('login')}
                   className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-medium text-ink hover:bg-muted transition"
                 >
                   Login
@@ -228,11 +256,7 @@ export default function LandingPage() {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setAuthMode('signup')
-                    setError('')
-                    setAuthModalOpen(true)
-                  }}
+                  onClick={() => openAuthModal('signup')}
                   className="rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-600 transition"
                 >
                   Sign Up
@@ -419,7 +443,7 @@ export default function LandingPage() {
                   Don't have an account?{' '}
                   <button
                     type="button"
-                    onClick={() => setAuthMode('signup')}
+                    onClick={() => { setAuthMode('signup'); setError(''); setEmail(''); setPassword('') }}
                     className="font-bold text-accent hover:underline"
                   >
                     Sign Up
@@ -430,7 +454,7 @@ export default function LandingPage() {
                   Already have an account?{' '}
                   <button
                     type="button"
-                    onClick={() => setAuthMode('login')}
+                    onClick={() => { setAuthMode('login'); setError(''); setEmail(''); setPassword('') }}
                     className="font-bold text-accent hover:underline"
                   >
                     Login

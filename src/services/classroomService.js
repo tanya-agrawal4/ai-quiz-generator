@@ -217,7 +217,7 @@ export function subscribeToStudents(testId, callback) {
 }
 
 /**
- * Fetch all submissions for the leaderboard.
+ * Fetch all submissions for the leaderboa.
  */
 export async function fetchSubmissions(testId) {
   if (!testId || !db) return []

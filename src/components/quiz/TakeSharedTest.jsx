@@ -21,25 +21,25 @@ import FormattedText from '../common/FormattedText'
 // Component: Skeleton Loader for "Loading Test..." state
 function SkeletonLoader() {
   return (
-    <div className="min-h-svh flex items-center justify-center p-6 bg-muted">
-      <div className="w-full max-w-xl rounded-3xl border border-border bg-surface p-8 shadow-xl space-y-6">
+    <div className="min-h-svh flex items-center justify-center p-6 bg-white">
+      <div className="w-full max-w-xl rounded-2xl border border-slate-200/80 bg-white p-8 shadow-xs space-y-6">
         <div className="flex items-center gap-3">
-          <div className="h-6 w-6 rounded-full bg-slate-200 animate-pulse" />
-          <div className="h-4 w-32 rounded bg-slate-200 animate-pulse" />
+          <div className="h-6 w-6 rounded-full bg-slate-100 animate-pulse" />
+          <div className="h-4 w-32 rounded bg-slate-100 animate-pulse" />
         </div>
-        <div className="h-8 w-3/4 rounded-xl bg-slate-200 animate-pulse" />
-        <div className="h-4 w-1/2 rounded bg-slate-200 animate-pulse" />
+        <div className="h-8 w-3/4 rounded-xl bg-slate-100 animate-pulse" />
+        <div className="h-4 w-1/2 rounded bg-slate-100 animate-pulse" />
 
-        <div className="space-y-3 pt-4 border-t border-border">
-          <div className="h-14 w-full rounded-2xl bg-slate-100 animate-pulse" />
-          <div className="h-14 w-full rounded-2xl bg-slate-100 animate-pulse" />
-          <div className="h-14 w-full rounded-2xl bg-slate-100 animate-pulse" />
+        <div className="space-y-3 pt-4 border-t border-slate-200">
+          <div className="h-14 w-full rounded-xl bg-slate-50 animate-pulse" />
+          <div className="h-14 w-full rounded-xl bg-slate-50 animate-pulse" />
+          <div className="h-14 w-full rounded-xl bg-slate-50 animate-pulse" />
         </div>
 
         <div className="flex justify-center pt-2">
-          <div className="flex items-center gap-2 text-xs font-semibold text-accent animate-pulse">
-            <div className="h-4 w-4 rounded-full border-2 border-accent border-t-transparent animate-spin" />
-            <span>Loading Test... Fetching database payload...</span>
+          <div className="flex items-center gap-2 text-xs font-semibold text-indigo-600 animate-pulse">
+            <div className="h-4 w-4 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+            <span>Loading Test Payload…</span>
           </div>
         </div>
       </div>
@@ -48,7 +48,6 @@ function SkeletonLoader() {
 }
 
 export default function TakeSharedTest({ docId, onBackToApp }) {
-  // Extract ID from URL safely
   const effectiveDocId =
     docId ||
     (typeof window !== 'undefined'
@@ -61,13 +60,9 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
   const [error, setError] = useState('')
   const [quizData, setQuizData] = useState(null)
 
-  // Stage state: 'welcome' | 'test' | 'completed'
   const [stage, setStage] = useState('welcome')
-
-  // Participant Registration State
   const [participantName, setParticipantName] = useState('')
 
-  // Active Quiz State
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState({})
   const [violations, setViolations] = useState([])
@@ -76,7 +71,7 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
-  // 1. Fetch Quiz Data from Firestore with robust try...catch
+  // 1. Fetch Quiz Data from Firestore
   useEffect(() => {
     if (!effectiveDocId) {
       setError('No valid test ID provided in URL.')
@@ -123,7 +118,7 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
     return () => clearInterval(timer)
   }, [stage])
 
-  // 3. Strict Mode Anti-Cheat Enforcement & Event Listeners
+  // 3. Strict Mode Anti-Cheat Enforcement
   useEffect(() => {
     if (stage !== 'test' || !quizData || quizData?.mode !== 'strict') return undefined
 
@@ -167,7 +162,6 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
     }
   }, [stage, quizData])
 
-  // Handlers with robust try...catch blocks
   const handleStartTest = async (e) => {
     e?.preventDefault()
     setErrorMessage('')
@@ -181,7 +175,6 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
       setStage('test')
       setElapsed(0)
 
-      // Request Full-Screen API if in Strict Mode
       if (quizData?.mode === 'strict') {
         try {
           if (document?.documentElement?.requestFullscreen) {
@@ -189,7 +182,6 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
           }
         } catch (fsErr) {
           console.error('Detailed Error:', fsErr)
-          // Display graceful UI notification if browser restricts automatic fullscreen
           setErrorMessage('Full-screen request was blocked by browser. Click "Enter Fullscreen" button in header.')
         }
       }
@@ -240,7 +232,6 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
     setErrorMessage('')
 
     try {
-      // Exit full-screen mode cleanly if active
       if (document?.fullscreenElement) {
         try {
           await document.exitFullscreen()
@@ -274,8 +265,6 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
     }
   }
 
-  // --- RENDER STAGES ---
-
   // 1. Loading Skeleton
   if (loading) {
     return <SkeletonLoader />
@@ -284,13 +273,13 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
   // 2. Error State
   if (error || !quizData) {
     return (
-      <div className="min-h-svh flex items-center justify-center p-6 bg-muted">
-        <div className="w-full max-w-md rounded-3xl border border-red-200 bg-surface p-8 shadow-xl text-center space-y-4">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-danger">
-            <AlertCircle className="h-7 w-7" />
+      <div className="min-h-svh flex items-center justify-center p-6 bg-white">
+        <div className="w-full max-w-md rounded-2xl border border-red-200 bg-white p-8 shadow-xs text-center space-y-4">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-600 border border-red-100">
+            <AlertCircle className="h-6 w-6" />
           </div>
-          <h2 className="text-2xl font-bold text-ink">Test Link Invalid</h2>
-          <p className="text-sm text-subtle">{error || 'The test link may have expired or does not exist.'}</p>
+          <h2 className="text-xl font-bold text-slate-900">Test Link Invalid</h2>
+          <p className="text-xs text-slate-500 leading-relaxed">{error || 'The test link may have expired or does not exist.'}</p>
           {onBackToApp && (
             <button
               type="button"
@@ -302,7 +291,7 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
                   window.location.href = '/'
                 }
               }}
-              className="mt-4 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-indigo-600 transition"
+              className="mt-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 transition-all"
             >
               Back to Home
             </button>
@@ -320,84 +309,83 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
   // 3. Welcome to the Test Landing Screen
   if (stage === 'welcome') {
     return (
-      <div className="min-h-svh flex items-center justify-center p-4 md:p-8 bg-muted">
-        <div className="w-full max-w-xl rounded-3xl border border-border bg-surface p-8 md:p-10 shadow-2xl space-y-8 text-left">
+      <div className="min-h-svh flex items-center justify-center p-4 md:p-8 bg-white">
+        <div className="w-full max-w-xl rounded-2xl border border-slate-200/80 bg-white p-8 md:p-10 shadow-xs space-y-6 text-left">
           {/* Header Badge & Metadata */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <div className="flex items-center gap-2">
               {isStrict ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-100 px-3.5 py-1 text-xs font-bold text-accent border border-indigo-200">
-                  <ShieldAlert className="h-3.5 w-3.5" /> Exam Mode (Strict Anti-Cheat)
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-0.5 text-xs font-bold text-indigo-700 border border-indigo-100">
+                  <ShieldAlert className="h-3.5 w-3.5" /> Exam Mode (Strict)
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3.5 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-100">
                   <Gamepad2 className="h-3.5 w-3.5" /> Challenge Mode (Casual)
                 </span>
               )}
-              <span className="text-xs text-subtle font-medium">By {quizData?.creatorName || 'Creator'}</span>
+              <span className="text-xs text-slate-500 font-medium">By {quizData?.creatorName || 'Creator'}</span>
             </div>
 
-            <h1 className="text-3xl font-extrabold tracking-tight text-ink">
-              Welcome to the Test!
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+              Welcome to the Test
             </h1>
-            <p className="text-sm text-subtle leading-relaxed">
-              You are about to begin <span className="font-bold text-ink">"{quizData?.title || 'Quiz'}"</span>. Please enter your name below to start.
+            <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+              You are about to begin <span className="font-semibold text-slate-900">"{quizData?.title || 'Quiz'}"</span>. Please enter your name below to register your session.
             </p>
           </div>
 
-          {/* RED UI ERROR BANNER */}
+          {/* Error Banner */}
           {errorMessage && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-danger flex items-start gap-2.5 shadow-sm">
-              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold">Error: </span>
+            <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 text-xs text-red-700 flex items-start gap-2 shadow-xs">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-600" />
+              <div className="font-medium">
                 <span>{errorMessage}</span>
               </div>
             </div>
           )}
 
           {/* Quiz Details Summary Box */}
-          <div className="grid grid-cols-3 gap-3 rounded-2xl bg-muted p-4 border border-border text-center">
-            <div className="space-y-1">
-              <div className="flex items-center justify-center text-subtle">
+          <div className="grid grid-cols-3 gap-3 rounded-xl bg-slate-50/70 p-4 border border-slate-200 text-center">
+            <div className="space-y-0.5">
+              <div className="flex items-center justify-center text-slate-400 mb-1">
                 <BookOpen className="h-4 w-4" />
               </div>
-              <p className="text-xs text-subtle font-medium">Questions</p>
-              <p className="text-lg font-bold text-ink">{questionsList.length}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Questions</p>
+              <p className="text-lg font-extrabold text-slate-900">{questionsList.length}</p>
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-center text-subtle">
+            <div className="space-y-0.5">
+              <div className="flex items-center justify-center text-slate-400 mb-1">
                 <Clock className="h-4 w-4" />
               </div>
-              <p className="text-xs text-subtle font-medium">Topic</p>
-              <p className="text-sm font-bold text-ink truncate">{quizData?.topic || 'General'}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Topic</p>
+              <p className="text-xs font-bold text-slate-900 truncate">{quizData?.topic || 'General'}</p>
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-center text-subtle">
-                <UserCheck className="h-4 w-4 text-accent" />
+            <div className="space-y-0.5">
+              <div className="flex items-center justify-center text-indigo-500 mb-1">
+                <UserCheck className="h-4 w-4" />
               </div>
-              <p className="text-xs text-subtle font-medium">Difficulty</p>
-              <p className="text-sm font-bold text-accent">{quizData?.difficulty || 'Mixed'}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Difficulty</p>
+              <p className="text-xs font-bold text-indigo-600">{quizData?.difficulty || 'Mixed'}</p>
             </div>
           </div>
 
-          {/* Strict Anti-Cheat Warning Banner */}
+          {/* Strict Anti-Cheat Notice */}
           {isStrict && (
-            <div className="rounded-2xl border border-indigo-200 bg-accent-soft/60 p-4 text-xs space-y-1 text-ink">
-              <p className="font-bold text-accent flex items-center gap-1.5">
-                <ShieldAlert className="h-4 w-4" /> Strict Full-Screen Exam Notice
+            <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3.5 text-xs space-y-1 text-slate-800">
+              <p className="font-bold text-indigo-800 flex items-center gap-1.5">
+                <ShieldAlert className="h-3.5 w-3.5 text-indigo-600" /> Strict Full-Screen Exam Notice
               </p>
-              <p className="text-subtle">
-                Clicking 'Start Test Now' will force full-screen mode. Tab switching or exiting full-screen will log violations and display a warning overlay.
+              <p className="text-slate-600 text-[11px] leading-relaxed">
+                Clicking 'Start Test Now' will activate full-screen mode. Tab switching or exiting full-screen logs violations for session integrity.
               </p>
             </div>
           )}
 
           {/* Registration Form */}
-          <form onSubmit={handleStartTest} className="space-y-4">
-            <label className="block space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-subtle block">
-                Participant's Name <span className="text-danger">*</span>
+          <form onSubmit={handleStartTest} className="space-y-4 pt-1">
+            <label className="block space-y-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                Participant's Name <span className="text-red-600">*</span>
               </span>
               <input
                 type="text"
@@ -405,16 +393,16 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
                 value={participantName}
                 onChange={(e) => setParticipantName(e.target.value)}
                 placeholder="e.g. Alex Morgan"
-                className="w-full rounded-2xl border border-border bg-surface px-4 py-3.5 text-base font-medium outline-none ring-accent/20 focus:ring-4 text-ink shadow-sm"
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-900 shadow-xs transition-all placeholder:text-slate-400"
               />
             </label>
 
             <button
               type="submit"
               disabled={!participantName.trim()}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-accent px-6 py-4 text-base font-bold text-white shadow-lg hover:bg-indigo-600 transition disabled:opacity-40"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3.5 text-sm font-bold text-white shadow-xs hover:bg-indigo-700 active:scale-[0.98] transition-all disabled:opacity-40"
             >
-              <Play className="h-5 w-5 fill-current" />
+              <Play className="h-4 w-4 fill-current" />
               <span>Start Test Now</span>
             </button>
           </form>
@@ -423,50 +411,49 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
     )
   }
 
-  // 4. Test Taking View (Strict Answer Privacy & Distraction-Free Layout)
+  // 4. Test Taking View
   const currentQ = questionsList[currentIndex]
 
   if (stage === 'test' && currentQ) {
     return (
       <>
-        <div className="min-h-svh bg-muted p-4 md:p-8 flex justify-center text-left">
+        <div className="min-h-svh bg-white p-4 md:p-8 flex justify-center text-left">
           <div className="w-full max-w-4xl space-y-6">
-            {/* RED UI ERROR BANNER */}
+            {/* Error Notification */}
             {errorMessage && (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-danger flex items-start gap-2.5 shadow-sm">
-                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold">Notice: </span>
+              <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 text-xs text-red-700 flex items-start gap-2 shadow-xs">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-600" />
+                <div className="font-medium">
                   <span>{errorMessage}</span>
                 </div>
               </div>
             )}
 
-            {/* Distraction-Free Header Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-border bg-surface p-6 shadow-sm">
+            {/* Header Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-accent uppercase tracking-wide">
+                  <span className="text-xs font-bold text-indigo-700 uppercase tracking-wide">
                     Candidate: {participantName}
                   </span>
-                  <span className="text-xs text-subtle">· {quizData?.title || 'Quiz'}</span>
+                  <span className="text-xs text-slate-400">· {quizData?.title || 'Quiz'}</span>
                 </div>
-                <h2 className="mt-1 text-xl font-bold tracking-tight text-ink">
+                <h2 className="mt-1 text-xl font-extrabold tracking-tight text-slate-900">
                   Question {currentIndex + 1} of {questionsList.length}
                 </h2>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2 text-sm font-mono font-semibold text-ink shadow-sm">
-                  <Timer className="h-4 w-4 text-accent" />
-                  {minutes}:{seconds}
+                <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-mono font-semibold text-slate-700 shadow-xs">
+                  <Timer className="h-4 w-4 text-indigo-600" />
+                  <span>{minutes}:{seconds}</span>
                 </div>
 
                 {isStrict && !document.fullscreenElement && (
                   <button
                     type="button"
                     onClick={handleReturnToFullscreen}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-accent bg-accent-soft px-3 py-2 text-xs font-bold text-accent hover:bg-indigo-100 transition"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition-colors shadow-xs"
                   >
                     <Maximize2 className="h-3.5 w-3.5" />
                     <span>Enter Fullscreen</span>
@@ -475,16 +462,16 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
               </div>
             </div>
 
-            {/* Question Box (DISTRACTION FREE & NO ANSWERS REVEALED) */}
-            <section className="rounded-3xl border border-border bg-surface p-8 shadow-sm space-y-6">
-              <div className="text-xl font-semibold leading-8 text-ink">
+            {/* Question Card */}
+            <section className="rounded-2xl border border-slate-200/80 bg-white p-8 shadow-xs space-y-6">
+              <div className="text-xl font-bold leading-relaxed text-slate-900">
                 <FormattedText>{currentQ?.prompt || ''}</FormattedText>
               </div>
 
               <div className="mt-6">
                 {currentQ?.questionType === 'SHORT_ANSWER' ? (
-                  <label className="block space-y-2">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-subtle">
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
                       Your Answer
                     </span>
                     <input
@@ -492,7 +479,7 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
                       value={answers[currentQ?.id] || ''}
                       onChange={(e) => setAnswers({ ...answers, [currentQ.id]: e.target.value })}
                       placeholder="Type your answer here..."
-                      className="w-full rounded-2xl border border-border bg-surface px-4 py-3.5 text-base outline-none ring-accent/20 focus:ring-4 font-medium text-ink shadow-sm"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-semibold outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-900 shadow-xs transition-all"
                     />
                   </label>
                 ) : (
@@ -505,16 +492,23 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
                           type="button"
                           onClick={() => setAnswers({ ...answers, [currentQ.id]: idx })}
                           className={[
-                            'flex items-center gap-3 rounded-2xl border px-5 py-4 text-left text-sm transition shadow-sm',
+                            'flex items-center gap-3.5 rounded-xl border px-4 py-3.5 text-left text-sm transition-all duration-150 shadow-xs',
                             selected
-                              ? 'border-accent bg-accent-soft text-accent font-semibold ring-2 ring-accent/20'
-                              : 'border-border bg-muted/60 text-ink hover:border-slate-300 hover:bg-surface',
+                              ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 font-semibold ring-2 ring-indigo-500/20'
+                              : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/70',
                           ].join(' ')}
                         >
-                          <span className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-surface text-xs font-bold">
+                          <span
+                            className={[
+                              'shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-lg border text-xs font-bold transition-colors',
+                              selected
+                                ? 'border-indigo-600 bg-indigo-600 text-white shadow-xs'
+                                : 'border-slate-200 bg-slate-50 text-slate-700',
+                            ].join(' ')}
+                          >
                             {String.fromCharCode(65 + idx)}
                           </span>
-                          <div className="flex-1">
+                          <div className="flex-1 font-medium">
                             <FormattedText>{opt}</FormattedText>
                           </div>
                         </button>
@@ -526,12 +520,12 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
             </section>
 
             {/* Navigation Controls */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pt-2">
               <button
                 type="button"
                 onClick={() => setCurrentIndex((prev) => Math.max(prev - 1, 0))}
                 disabled={currentIndex === 0}
-                className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-medium text-ink disabled:opacity-40"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 hover:text-slate-900 transition-all disabled:opacity-40"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
@@ -541,7 +535,7 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
                 <button
                   type="button"
                   onClick={() => setCurrentIndex((prev) => prev + 1)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-indigo-600 transition"
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-700 active:scale-[0.98] transition-all"
                 >
                   <span>Next</span>
                   <ChevronRight className="h-4 w-4" />
@@ -551,55 +545,55 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
                   type="button"
                   onClick={handleSubmitTest}
                   disabled={isSubmitting}
-                  className="rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-emerald-700 transition disabled:opacity-50"
+                  className="rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-emerald-700 active:scale-[0.98] transition-all disabled:opacity-50"
                 >
-                  {isSubmitting ? 'Submitting Test...' : 'Submit Test'}
+                  {isSubmitting ? 'Submitting Test…' : 'Submit Test'}
                 </button>
               )}
             </div>
           </div>
         </div>
 
-        {/* STRICT ANTI-CHEAT WARNING MODAL OVERLAY */}
+        {/* Warning Modal Overlay */}
         {showWarningModal && isStrict && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="w-full max-w-lg rounded-3xl border-2 border-red-500 bg-surface p-8 shadow-2xl text-center space-y-6">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-danger animate-bounce">
-                <ShieldAlert className="h-8 w-8" />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-lg rounded-2xl border-2 border-red-500 bg-white p-8 shadow-2xl text-center space-y-6">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-red-50 text-red-600 border border-red-100 shadow-xs">
+                <ShieldAlert className="h-7 w-7" />
               </div>
 
-              <div className="space-y-2">
-                <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-danger">
+              <div className="space-y-1.5">
+                <span className="rounded-full bg-red-50 px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-700 border border-red-200">
                   Anti-Cheat Violation Detected
                 </span>
-                <h3 className="text-2xl font-bold text-ink">
-                  Warning: You have exited the test environment.
+                <h3 className="text-xl font-bold text-slate-900">
+                  You have exited the test environment
                 </h3>
-                <p className="text-sm font-bold text-danger">
-                  Your actions are recorded.
+                <p className="text-xs font-bold text-red-600">
+                  Your actions are recorded for instructor audit.
                 </p>
-                <p className="text-xs text-subtle">
-                  Exiting full-screen mode or switching tabs violates exam integrity guidelines.
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Exiting full-screen mode or switching windows violates exam integrity guidelines.
                 </p>
               </div>
 
-              <div className="rounded-xl bg-muted p-3.5 border border-border text-xs text-ink flex items-center justify-between">
-                <span className="font-semibold">Total Violations Logged:</span>
-                <span className="font-mono font-bold text-danger text-sm">{violations.length}</span>
+              <div className="rounded-xl bg-slate-50 p-3 border border-slate-200 text-xs text-slate-800 flex items-center justify-between">
+                <span className="font-semibold text-slate-600">Total Violations Logged:</span>
+                <span className="font-mono font-bold text-red-600 text-sm">{violations.length}</span>
               </div>
 
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2.5 pt-1">
                 <button
                   type="button"
                   onClick={handleReturnToFullscreen}
-                  className="w-full rounded-2xl bg-accent px-6 py-3.5 text-sm font-bold text-white shadow-lg hover:bg-indigo-600 transition"
+                  className="w-full rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white shadow-xs hover:bg-indigo-700 active:scale-[0.98] transition-all"
                 >
                   Return to Full-Screen Test
                 </button>
                 <button
                   type="button"
                   onClick={handleSubmitTest}
-                  className="w-full rounded-2xl border border-border bg-surface px-6 py-3 text-xs font-semibold text-subtle hover:bg-muted transition"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all"
                 >
                   Submit Test Now
                 </button>
@@ -617,46 +611,46 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
     const percent = total === 0 ? 0 : Math.round((score / total) * 100)
 
     return (
-      <div className="min-h-svh p-6 md:p-10 bg-muted flex items-center justify-center text-center">
-        <div className="w-full max-w-2xl rounded-3xl border border-border bg-surface p-8 md:p-10 shadow-2xl space-y-6">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-amber-50 text-amber-500">
-            <Trophy className="h-10 w-10" />
+      <div className="min-h-svh p-6 md:p-10 bg-white flex items-center justify-center text-center">
+        <div className="w-full max-w-2xl rounded-2xl border border-slate-200/80 bg-white p-8 md:p-10 shadow-sm space-y-6">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-500 border border-amber-100 shadow-xs">
+            <Trophy className="h-8 w-8" />
           </div>
 
-          <div className="space-y-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+          <div className="space-y-1.5">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-100">
               <CheckCircle2 className="h-3.5 w-3.5" /> Test Submitted Successfully
             </span>
-            <h1 className="text-3xl font-extrabold text-ink">{quizData?.title || 'Quiz'}</h1>
-            <p className="text-sm text-subtle font-medium">
-              Candidate: <span className="text-ink font-bold">{participantName}</span> · {isStrict ? 'Strict Exam' : 'Casual Challenge'}
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{quizData?.title || 'Quiz'}</h1>
+            <p className="text-xs text-slate-500 font-medium">
+              Candidate: <span className="text-slate-900 font-bold">{participantName}</span> · {isStrict ? 'Strict Exam' : 'Casual Challenge'}
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 rounded-2xl bg-muted p-5 border border-border text-center">
+          <div className="grid grid-cols-3 gap-3 rounded-xl bg-slate-50/70 p-5 border border-slate-200 text-center">
             <div>
-              <p className="text-xs text-subtle font-medium">Score</p>
-              <p className="text-3xl font-extrabold text-ink">{score} / {total}</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Score</p>
+              <p className="mt-1 text-2xl font-extrabold text-slate-900">{score} / {total}</p>
             </div>
             <div>
-              <p className="text-xs text-subtle font-medium">Accuracy</p>
-              <p className="text-3xl font-extrabold text-accent">{percent}%</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Accuracy</p>
+              <p className="mt-1 text-2xl font-extrabold text-indigo-600">{percent}%</p>
             </div>
             <div>
-              <p className="text-xs text-subtle font-medium">Time Taken</p>
-              <p className="text-3xl font-extrabold text-ink">{minutes}:{seconds}</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Time</p>
+              <p className="mt-1 text-2xl font-extrabold text-slate-900">{minutes}:{seconds}</p>
             </div>
           </div>
 
           {isStrict && (
             <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 text-xs text-left space-y-1">
-              <span className="font-bold text-accent block">Anti-Cheat Report: </span>
+              <span className="font-bold text-indigo-800 block">Anti-Cheat Report: </span>
               {violations.length === 0 ? (
                 <span className="text-emerald-700 font-semibold">Clean submission! Zero violations logged.</span>
               ) : (
-                <div className="space-y-1 text-danger font-semibold">
+                <div className="space-y-1 text-red-700 font-medium">
                   <p>{violations.length} violation(s) logged during test session:</p>
-                  <ul className="list-disc list-inside text-[11px] text-subtle">
+                  <ul className="list-disc list-inside text-[11px] text-slate-600">
                     {violations.map((v, i) => (
                       <li key={i}>{v.detail} ({new Date(v.at).toLocaleTimeString()})</li>
                     ))}
@@ -677,7 +671,7 @@ export default function TakeSharedTest({ docId, onBackToApp }) {
                   window.location.href = '/'
                 }
               }}
-              className="inline-flex items-center gap-2 rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-white shadow-md hover:bg-indigo-600 transition"
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 active:scale-[0.98] transition-all"
             >
               <span>Explore AI Quiz Generator</span>
               <Sparkles className="h-4 w-4" />

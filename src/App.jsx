@@ -130,9 +130,9 @@ export default function App() {
   // Show a loading screen while Firebase Auth initializes
   if (authLoading) {
     return (
-      <div className="min-h-svh flex flex-col items-center justify-center bg-muted text-ink gap-4">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
-        <p className="text-sm text-subtle font-medium">Loading your workspace…</p>
+      <div className="min-h-svh flex flex-col items-center justify-center bg-white text-slate-900 gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+        <p className="text-sm text-slate-500 font-medium">Loading your workspace…</p>
       </div>
     )
   }
@@ -249,11 +249,11 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-svh bg-muted text-ink">
+      <div className="min-h-svh bg-white text-slate-900">
         <div className="mx-auto flex min-h-svh max-w-[1440px]">
           {/* Sidebar and Main layout render for authenticated /dashboard routes */}
           <Sidebar />
-          <main className="flex-1 overflow-y-auto px-8 py-8 lg:px-10">
+          <main className="flex-1 overflow-y-auto px-8 py-8 lg:px-10 bg-white">
             <ActivePanel />
           </main>
         </div>

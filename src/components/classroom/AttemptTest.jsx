@@ -31,24 +31,24 @@ function CountdownBar({ remaining, total }) {
   const ss = String(remaining % 60).padStart(2, '0')
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 text-left">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Timer className={`h-4 w-4 ${isUrgent ? 'text-danger' : 'text-accent'}`} />
-          <span className="text-xs font-bold uppercase tracking-wider text-subtle">Time Remaining</span>
+          <Timer className={`h-4 w-4 ${isUrgent ? 'text-red-600' : 'text-indigo-600'}`} />
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Time Remaining</span>
         </div>
         <span
-          className={`font-mono text-lg font-extrabold tracking-wider ${
-            isCritical ? 'text-danger animate-pulse' : isUrgent ? 'text-amber-600' : 'text-ink'
+          className={`font-mono text-base font-extrabold tracking-wider ${
+            isCritical ? 'text-red-600 animate-pulse' : isUrgent ? 'text-amber-600' : 'text-slate-900'
           }`}
         >
           {mm}:{ss}
         </span>
       </div>
-      <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+      <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-1000 ease-linear ${
-            isCritical ? 'bg-danger' : isUrgent ? 'bg-amber-500' : 'bg-accent'
+            isCritical ? 'bg-red-600' : isUrgent ? 'bg-amber-500' : 'bg-indigo-600'
           }`}
           style={{ width: `${pct}%` }}
         />
@@ -68,9 +68,9 @@ function QuestionDots({ total, current, answers }) {
           <span
             key={i}
             className={[
-              'h-2.5 w-2.5 rounded-full transition-all duration-200',
+              'h-2.5 w-2.5 rounded-full transition-all duration-150',
               isCurrent
-                ? 'bg-accent scale-125 ring-2 ring-accent/30'
+                ? 'bg-indigo-600 scale-125 ring-2 ring-indigo-200'
                 : isAnswered
                   ? 'bg-emerald-500'
                   : 'bg-slate-200',
@@ -83,9 +83,7 @@ function QuestionDots({ total, current, answers }) {
   )
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 export default function AttemptTest({ testId, onExit }) {
-  // Stage: 'onboarding' | 'test' | 'submitted'
   const [stage, setStage] = useState('onboarding')
   const [studentName, setStudentName] = useState('')
   const [rollNumber, setRollNumber] = useState('')
@@ -93,22 +91,18 @@ export default function AttemptTest({ testId, onExit }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Test data from Firestore (real-time)
   const [testData, setTestData] = useState(null)
   const [fetchingTest, setFetchingTest] = useState(true)
 
-  // Quiz state
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState({})
   const [remainingSeconds, setRemainingSeconds] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [finalScore, setFinalScore] = useState(null)
 
-  // Refs
   const unsubRef = useRef(null)
   const hasSubmittedRef = useRef(false)
 
-  // ─── Subscribe to Test Document on Mount ────────────────────────────────
   useEffect(() => {
     if (!testId) {
       setFetchingTest(false)
@@ -139,7 +133,6 @@ export default function AttemptTest({ testId, onExit }) {
     }
   }, [testId])
 
-  // ─── Countdown Timer ───────────────────────────────────────────────────
   useEffect(() => {
     if (stage !== 'test' || !testData?.startTime) {
       return undefined
@@ -154,7 +147,6 @@ export default function AttemptTest({ testId, onExit }) {
         const left = Math.max(0, Math.floor((endMs - Date.now()) / 1000))
         setRemainingSeconds(left)
 
-        // Auto-submit when time runs out
         if (left <= 0 && !hasSubmittedRef.current) {
           handleSubmit(true)
         }
@@ -168,14 +160,11 @@ export default function AttemptTest({ testId, onExit }) {
     return () => clearInterval(interval)
   }, [stage, testData?.startTime, testData?.timeLimit]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-submit when teacher ends test
   useEffect(() => {
     if (testData?.status === 'completed' && stage === 'test' && !hasSubmittedRef.current) {
       handleSubmit(true)
     }
   }, [testData?.status, stage]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ─── Handlers ──────────────────────────────────────────────────────────
 
   const handleStartTest = (e) => {
     e?.preventDefault()
@@ -235,7 +224,6 @@ export default function AttemptTest({ testId, onExit }) {
         setError(err?.message || 'Failed to submit. Please try again.')
         hasSubmittedRef.current = false
       } else {
-        // On auto-submit failure, still show results locally
         const questions = testData?.quiz?.questions || []
         let score = 0
         questions.forEach((q) => {
@@ -254,35 +242,31 @@ export default function AttemptTest({ testId, onExit }) {
     }
   }, [testData, answers, testId, studentName, rollNumber, isSubmitting])
 
-  // ─── RENDER: Loading ───────────────────────────────────────────────────
-
   if (fetchingTest) {
     return (
-      <div className="min-h-svh flex flex-col items-center justify-center bg-muted text-ink gap-4">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
-        <p className="text-sm text-subtle font-medium">Loading test…</p>
+      <div className="min-h-svh flex flex-col items-center justify-center bg-white text-slate-900 gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+        <p className="text-xs text-slate-500 font-medium">Loading test room…</p>
       </div>
     )
   }
 
-  // ─── RENDER: Error (no test data) ──────────────────────────────────────
-
   if (!testData) {
     return (
-      <div className="min-h-svh flex items-center justify-center p-6 bg-muted">
-        <div className="w-full max-w-md rounded-3xl border border-border bg-surface p-8 shadow-xl space-y-6 text-center animate-in fade-in duration-300">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-danger">
-            <AlertCircle className="h-8 w-8" />
+      <div className="min-h-svh flex items-center justify-center p-6 bg-white">
+        <div className="w-full max-w-md rounded-2xl border border-red-200 bg-white p-8 shadow-xs space-y-4 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-red-50 text-red-600 border border-red-100">
+            <AlertCircle className="h-7 w-7" />
           </div>
-          <div className="space-y-2">
-            <h2 className="text-xl font-bold text-ink">Test Not Found</h2>
-            <p className="text-sm text-subtle">{error || 'The test you are looking for does not exist.'}</p>
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold text-slate-900">Test Not Found</h2>
+            <p className="text-xs text-slate-500">{error || 'The test you are looking for does not exist.'}</p>
           </div>
           {onExit && (
             <button
               type="button"
               onClick={onExit}
-              className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white shadow-md hover:bg-indigo-600 transition"
+              className="mt-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 transition-all"
             >
               ← Back to Home
             </button>
@@ -292,26 +276,24 @@ export default function AttemptTest({ testId, onExit }) {
     )
   }
 
-  // ─── RENDER: Test Completed (by teacher, before student started) ───────
-
   if (testData?.status === 'completed' && stage === 'onboarding') {
     return (
-      <div className="min-h-svh flex items-center justify-center p-6 bg-muted">
-        <div className="w-full max-w-md rounded-3xl border border-border bg-surface p-8 shadow-xl space-y-6 text-center animate-in fade-in duration-300">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-subtle">
-            <Clock className="h-8 w-8" />
+      <div className="min-h-svh flex items-center justify-center p-6 bg-white">
+        <div className="w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-8 shadow-xs space-y-4 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-slate-50 text-slate-500 border border-slate-200">
+            <Clock className="h-7 w-7" />
           </div>
-          <div className="space-y-2">
-            <h2 className="text-xl font-bold text-ink">Test Has Ended</h2>
-            <p className="text-sm text-subtle">
-              This test ("{testData?.quizTitle || 'Classroom Test'}") has already been completed by the teacher.
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold text-slate-900">Test Has Ended</h2>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              This test ("{testData?.quizTitle || 'Classroom Test'}") has already been concluded by the instructor.
             </p>
           </div>
           {onExit && (
             <button
               type="button"
               onClick={onExit}
-              className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white shadow-md hover:bg-indigo-600 transition"
+              className="mt-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 transition-all"
             >
               ← Back to Home
             </button>
@@ -322,39 +304,38 @@ export default function AttemptTest({ testId, onExit }) {
   }
 
   // ─── RENDER: Onboarding Form ───────────────────────────────────────────
-
   if (stage === 'onboarding') {
     const questionsCount = testData?.quiz?.questions?.length || 0
 
     return (
-      <div className="min-h-svh flex items-center justify-center p-4 md:p-8 bg-muted">
-        <div className="w-full max-w-md rounded-3xl border border-border bg-surface p-8 md:p-10 shadow-2xl space-y-8 text-left animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="min-h-svh flex items-center justify-center p-4 md:p-8 bg-white">
+        <div className="w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-8 md:p-10 shadow-xs space-y-6 text-left">
           {/* Header */}
-          <div className="space-y-3 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-soft text-accent">
-              <BookOpen className="h-8 w-8" />
+          <div className="space-y-2 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-xs">
+              <BookOpen className="h-7 w-7" />
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-ink">
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
               {testData?.quizTitle || 'Classroom Test'}
             </h1>
-            <p className="text-sm text-subtle">
-              Enter your details to begin the test.
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Enter your student details to register your session and begin the test.
             </p>
           </div>
 
           {/* Test Info */}
-          <div className="grid grid-cols-3 gap-3 rounded-2xl bg-muted p-4 border border-border text-center">
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-subtle">Questions</p>
-              <p className="text-xl font-extrabold text-ink">{questionsCount}</p>
+          <div className="grid grid-cols-3 gap-3 rounded-xl bg-slate-50/70 p-4 border border-slate-200 text-center">
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Questions</p>
+              <p className="text-lg font-extrabold text-slate-900">{questionsCount}</p>
             </div>
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-subtle">Duration</p>
-              <p className="text-xl font-extrabold text-ink">{testData?.timeLimit || '?'} min</p>
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Duration</p>
+              <p className="text-lg font-extrabold text-slate-900">{testData?.timeLimit || '?'} min</p>
             </div>
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-subtle">Status</p>
-              <p className={`text-sm font-bold ${testData?.status === 'active' ? 'text-emerald-600' : 'text-amber-600'}`}>
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Status</p>
+              <p className={`text-xs font-bold ${testData?.status === 'active' ? 'text-emerald-600' : 'text-amber-600'}`}>
                 {testData?.status === 'active' ? '● Live' : '◉ Waiting'}
               </p>
             </div>
@@ -362,60 +343,60 @@ export default function AttemptTest({ testId, onExit }) {
 
           {/* Error */}
           {error && (
-            <div className="flex items-center gap-2 text-xs font-semibold text-danger bg-red-50 border border-red-200 rounded-xl p-3">
-              <AlertCircle className="h-4 w-4 shrink-0" />
+            <div className="flex items-center gap-2 text-xs font-semibold text-red-700 bg-red-50/80 border border-red-200 rounded-xl p-3 shadow-xs">
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
               <span>{error}</span>
             </div>
           )}
 
           {/* Onboarding Form */}
           <form onSubmit={handleStartTest} className="space-y-4">
-            <label className="block space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-subtle">
-                Your Name <span className="text-danger">*</span>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                Your Full Name <span className="text-red-600">*</span>
               </span>
               <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-subtle" />
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
                   type="text"
                   value={studentName}
                   onChange={(e) => setStudentName(e.target.value)}
                   placeholder="e.g. Alex Morgan"
-                  className="w-full rounded-2xl border border-border bg-surface pl-10 pr-4 py-3.5 text-base font-medium text-ink outline-none ring-accent/20 focus:ring-4 shadow-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 shadow-xs transition-all"
                 />
               </div>
             </label>
 
-            <label className="block space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-subtle">
-                Roll Number <span className="text-danger">*</span>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                Roll Number / ID <span className="text-red-600">*</span>
               </span>
               <div className="relative">
-                <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-subtle" />
+                <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
                   type="text"
                   value={rollNumber}
                   onChange={(e) => setRollNumber(e.target.value)}
                   placeholder="e.g. 2024CS001"
-                  className="w-full rounded-2xl border border-border bg-surface pl-10 pr-4 py-3.5 text-base font-medium text-ink outline-none ring-accent/20 focus:ring-4 shadow-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 shadow-xs transition-all"
                 />
               </div>
             </label>
 
-            <label className="block space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-subtle">
-                Room Code <span className="text-danger">*</span>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                Room Code <span className="text-red-600">*</span>
               </span>
               <div className="relative">
-                <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-subtle" />
+                <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
                   type="text"
                   value={roomCode}
                   onChange={(e) => setRoomCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="6-digit code from your teacher"
+                  placeholder="6-digit code"
                   maxLength={6}
                   inputMode="numeric"
-                  className="w-full rounded-2xl border border-border bg-surface pl-10 pr-4 py-3.5 text-base font-medium text-ink outline-none ring-accent/20 focus:ring-4 shadow-sm tracking-widest"
+                  className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-3 text-sm font-mono font-bold text-slate-900 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 shadow-xs tracking-widest transition-all"
                 />
               </div>
             </label>
@@ -423,14 +404,14 @@ export default function AttemptTest({ testId, onExit }) {
             <button
               type="submit"
               disabled={loading || !studentName.trim() || !rollNumber.trim() || roomCode.length !== 6}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-accent px-6 py-4 text-base font-bold text-white shadow-lg hover:bg-indigo-600 active:scale-[0.98] transition disabled:opacity-40"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3.5 text-sm font-bold text-white shadow-xs hover:bg-indigo-700 active:scale-[0.98] transition-all disabled:opacity-40"
             >
               {loading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Users className="h-5 w-5" />
+                <Users className="h-4 w-4" />
               )}
-              <span>Start Test</span>
+              <span>Start Assessment</span>
             </button>
           </form>
 
@@ -439,7 +420,7 @@ export default function AttemptTest({ testId, onExit }) {
             <button
               type="button"
               onClick={onExit}
-              className="w-full text-center text-xs font-medium text-subtle hover:text-ink transition"
+              className="w-full text-center text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
             >
               ← Back to Home
             </button>
@@ -450,7 +431,6 @@ export default function AttemptTest({ testId, onExit }) {
   }
 
   // ─── RENDER: Test Stage ────────────────────────────────────────────────
-
   if (stage === 'test') {
     const questions = testData?.quiz?.questions || []
     const currentQ = questions[currentIndex]
@@ -459,29 +439,29 @@ export default function AttemptTest({ testId, onExit }) {
 
     if (!currentQ) {
       return (
-        <div className="min-h-svh flex items-center justify-center p-6 bg-muted">
-          <div className="text-center space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin text-accent mx-auto" />
-            <p className="text-sm text-subtle">Loading questions…</p>
+        <div className="min-h-svh flex items-center justify-center p-6 bg-white">
+          <div className="text-center space-y-3">
+            <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mx-auto" />
+            <p className="text-xs text-slate-500">Loading questions…</p>
           </div>
         </div>
       )
     }
 
     return (
-      <div className="min-h-svh bg-muted p-4 md:p-8 flex justify-center text-left">
+      <div className="min-h-svh bg-white p-4 md:p-8 flex justify-center text-left">
         <div className="w-full max-w-4xl space-y-5">
           {/* Top Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-border bg-surface p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-accent uppercase tracking-wide">
+                <span className="text-xs font-bold text-indigo-700 uppercase tracking-wide">
                   {studentName}
                 </span>
-                <span className="text-xs text-subtle">· {rollNumber}</span>
-                <span className="text-xs text-subtle">· {testData?.quizTitle || 'Test'}</span>
+                <span className="text-xs text-slate-400">· {rollNumber}</span>
+                <span className="text-xs text-slate-400">· {testData?.quizTitle || 'Test'}</span>
               </div>
-              <h2 className="mt-1 text-lg font-bold tracking-tight text-ink">
+              <h2 className="mt-1 text-lg font-extrabold tracking-tight text-slate-900">
                 Question {currentIndex + 1} of {questions.length}
               </h2>
             </div>
@@ -492,7 +472,7 @@ export default function AttemptTest({ testId, onExit }) {
                 current={currentIndex}
                 answers={answers}
               />
-              <span className="text-xs font-semibold text-subtle bg-muted border border-border rounded-lg px-2.5 py-1">
+              <span className="text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1">
                 {answeredCount}/{questions.length}
               </span>
             </div>
@@ -500,21 +480,21 @@ export default function AttemptTest({ testId, onExit }) {
 
           {/* Countdown Bar */}
           {remainingSeconds != null && (
-            <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
               <CountdownBar remaining={remainingSeconds} total={totalSeconds} />
             </div>
           )}
 
           {/* Question Card */}
-          <section className="rounded-3xl border border-border bg-surface p-7 md:p-8 shadow-sm space-y-6">
-            <div className="text-lg md:text-xl font-semibold leading-8 text-ink">
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-7 md:p-8 shadow-xs space-y-6">
+            <div className="text-lg md:text-xl font-bold leading-relaxed text-slate-900">
               <FormattedText>{currentQ?.prompt || ''}</FormattedText>
             </div>
 
             <div className="mt-4">
               {currentQ?.questionType === 'SHORT_ANSWER' ? (
-                <label className="block space-y-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-subtle">
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
                     Your Answer
                   </span>
                   <input
@@ -522,7 +502,7 @@ export default function AttemptTest({ testId, onExit }) {
                     value={answers[currentQ?.id] || ''}
                     onChange={(e) => setAnswers({ ...answers, [currentQ.id]: e.target.value })}
                     placeholder="Type your answer here..."
-                    className="w-full rounded-2xl border border-border bg-surface px-4 py-3.5 text-base outline-none ring-accent/20 focus:ring-4 font-medium text-ink shadow-sm transition"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-semibold outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-900 shadow-xs transition-all"
                   />
                 </label>
               ) : (
@@ -535,23 +515,23 @@ export default function AttemptTest({ testId, onExit }) {
                         type="button"
                         onClick={() => setAnswers({ ...answers, [currentQ.id]: idx })}
                         className={[
-                          'flex items-center gap-3 rounded-2xl border px-5 py-4 text-left text-sm transition-all duration-200 shadow-sm',
+                          'flex items-center gap-3.5 rounded-xl border px-5 py-4 text-left text-sm transition-all duration-150 shadow-xs',
                           selected
-                            ? 'border-accent bg-accent-soft text-accent font-semibold ring-2 ring-accent/20 scale-[1.01]'
-                            : 'border-border bg-muted/60 text-ink hover:border-slate-300 hover:bg-surface',
+                            ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 font-semibold ring-2 ring-indigo-500/20'
+                            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/70',
                         ].join(' ')}
                       >
                         <span
                           className={[
-                            'shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-full border text-xs font-bold transition',
+                            'shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-lg border text-xs font-bold transition-colors',
                             selected
-                              ? 'border-accent bg-accent text-white'
-                              : 'border-border bg-surface text-ink',
+                              ? 'border-indigo-600 bg-indigo-600 text-white shadow-xs'
+                              : 'border-slate-200 bg-slate-50 text-slate-700',
                           ].join(' ')}
                         >
                           {String.fromCharCode(65 + idx)}
                         </span>
-                        <div className="flex-1">
+                        <div className="flex-1 font-medium">
                           <FormattedText>{opt}</FormattedText>
                         </div>
                       </button>
@@ -563,12 +543,12 @@ export default function AttemptTest({ testId, onExit }) {
           </section>
 
           {/* Navigation */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pt-1">
             <button
               type="button"
               onClick={() => setCurrentIndex((prev) => Math.max(prev - 1, 0))}
               disabled={currentIndex === 0}
-              className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-medium text-ink hover:bg-muted transition disabled:opacity-40"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 hover:text-slate-900 transition-all disabled:opacity-40"
             >
               <ChevronLeft className="h-4 w-4" />
               Previous
@@ -578,7 +558,7 @@ export default function AttemptTest({ testId, onExit }) {
               <button
                 type="button"
                 onClick={() => setCurrentIndex((prev) => prev + 1)}
-                className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-indigo-600 active:scale-[0.98] transition"
+                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-700 active:scale-[0.98] transition-all"
               >
                 <span>Next</span>
                 <ChevronRight className="h-4 w-4" />
@@ -588,7 +568,7 @@ export default function AttemptTest({ testId, onExit }) {
                 type="button"
                 onClick={() => handleSubmit(false)}
                 disabled={isSubmitting}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-emerald-700 active:scale-[0.98] transition disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-emerald-700 active:scale-[0.98] transition-all disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -600,10 +580,9 @@ export default function AttemptTest({ testId, onExit }) {
             )}
           </div>
 
-          {/* Error */}
           {error && (
-            <div className="flex items-center gap-2 text-xs font-semibold text-danger bg-red-50 border border-red-200 rounded-xl p-3">
-              <AlertCircle className="h-4 w-4 shrink-0" />
+            <div className="flex items-center gap-2 text-xs font-semibold text-red-700 bg-red-50/80 border border-red-200 rounded-xl p-3 shadow-xs">
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
               <span>{error}</span>
             </div>
           )}
@@ -613,71 +592,65 @@ export default function AttemptTest({ testId, onExit }) {
   }
 
   // ─── RENDER: Submitted Stage ───────────────────────────────────────────
-
   if (stage === 'submitted') {
     const score = finalScore?.score ?? 0
     const total = finalScore?.total ?? 0
     const pct = total > 0 ? Math.round((score / total) * 100) : 0
 
     return (
-      <div className="min-h-svh p-6 md:p-10 bg-muted flex items-center justify-center text-center">
-        <div className="w-full max-w-lg rounded-3xl border border-border bg-surface p-8 md:p-10 shadow-2xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {/* Trophy */}
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-amber-50 text-amber-500">
-            <Trophy className="h-10 w-10" />
+      <div className="min-h-svh p-6 md:p-10 bg-white flex items-center justify-center text-center">
+        <div className="w-full max-w-lg rounded-2xl border border-slate-200/80 bg-white p-8 md:p-10 shadow-xs space-y-6">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-500 border border-amber-100 shadow-xs">
+            <Trophy className="h-8 w-8" />
           </div>
 
-          {/* Success Message */}
-          <div className="space-y-3">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+          <div className="space-y-1.5">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-100">
               <CheckCircle2 className="h-3.5 w-3.5" /> Test Submitted Successfully
             </span>
-            <h1 className="text-3xl font-extrabold text-ink">{testData?.quizTitle || 'Classroom Test'}</h1>
-            <p className="text-sm text-subtle">
-              <span className="font-bold text-ink">{studentName}</span> · {rollNumber} · Submitted
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{testData?.quizTitle || 'Classroom Test'}</h1>
+            <p className="text-xs text-slate-500">
+              <span className="font-bold text-slate-900">{studentName}</span> · {rollNumber} · Submitted
             </p>
           </div>
 
-          {/* Score Card */}
-          <div className="grid grid-cols-3 gap-4 rounded-2xl bg-muted p-5 border border-border text-center">
+          <div className="grid grid-cols-3 gap-3 rounded-xl bg-slate-50/70 p-5 border border-slate-200 text-center">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-subtle">Score</p>
-              <p className="text-3xl font-extrabold text-ink">{score}/{total}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Score</p>
+              <p className="mt-1 text-2xl font-extrabold text-slate-900">{score}/{total}</p>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-subtle">Accuracy</p>
-              <p className={`text-3xl font-extrabold ${pct >= 70 ? 'text-emerald-600' : pct >= 40 ? 'text-amber-600' : 'text-danger'}`}>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Accuracy</p>
+              <p className={`mt-1 text-2xl font-extrabold ${pct >= 70 ? 'text-emerald-600' : pct >= 40 ? 'text-amber-600' : 'text-red-600'}`}>
                 {pct}%
               </p>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-subtle">Answered</p>
-              <p className="text-3xl font-extrabold text-accent">{Object.keys(answers).length}/{total}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Answered</p>
+              <p className="mt-1 text-2xl font-extrabold text-indigo-600">{Object.keys(answers).length}/{total}</p>
             </div>
           </div>
 
-          {/* Performance Message */}
-          <div className={`rounded-2xl p-4 border text-sm font-medium ${
+          <div className={`rounded-xl p-3.5 border text-xs font-semibold ${
             pct >= 80
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
               : pct >= 50
-                ? 'bg-amber-50 border-amber-200 text-amber-700'
-                : 'bg-red-50 border-red-200 text-danger'
+                ? 'bg-amber-50 border-amber-200 text-amber-800'
+                : 'bg-red-50 border-red-200 text-red-800'
           }`}>
             {pct >= 80
-              ? '🎉 Excellent work! Outstanding performance!'
+              ? '🎉 Excellent work! Outstanding test score!'
               : pct >= 50
                 ? '👍 Good effort! Keep practicing to improve.'
                 : '📚 Keep studying — you\'ll do better next time!'}
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-3 pt-2">
             {onExit && (
               <button
                 type="button"
                 onClick={onExit}
-                className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white shadow-md hover:bg-indigo-600 active:scale-[0.98] transition"
+                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 active:scale-[0.98] transition-all"
               >
                 ← Back to Home
               </button>

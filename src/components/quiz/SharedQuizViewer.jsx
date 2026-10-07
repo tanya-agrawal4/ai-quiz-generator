@@ -83,11 +83,11 @@ export default function SharedQuizViewer({ docId, onBackToApp }) {
 
   if (loading) {
     return (
-      <div className="min-h-svh flex flex-col items-center justify-center p-6 text-center bg-muted">
-        <div className="rounded-3xl border border-border bg-surface p-10 shadow-xl space-y-4 max-w-md w-full">
-          <Loader2 className="h-12 w-12 animate-spin text-accent mx-auto" />
-          <h2 className="text-xl font-bold text-ink">Loading Shared Quiz...</h2>
-          <p className="text-sm text-subtle">Fetching questions & settings from Firestore database.</p>
+      <div className="min-h-svh flex flex-col items-center justify-center p-6 text-center bg-white">
+        <div className="rounded-2xl border-2 border-slate-200 bg-white p-10 shadow-sm space-y-4 max-w-md w-full">
+          <Loader2 className="h-10 w-10 animate-spin text-indigo-600 mx-auto" />
+          <h2 className="text-lg font-extrabold text-slate-900">Loading Shared Quiz...</h2>
+          <p className="text-xs text-slate-500 font-medium">Fetching questions & settings from Firestore database.</p>
         </div>
       </div>
     )
@@ -95,18 +95,18 @@ export default function SharedQuizViewer({ docId, onBackToApp }) {
 
   if (error || !quizData) {
     return (
-      <div className="min-h-svh flex items-center justify-center p-6 bg-muted">
-        <div className="rounded-3xl border border-red-200 bg-surface p-10 shadow-xl text-center space-y-4 max-w-md w-full">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-danger">
-            <AlertCircle className="h-7 w-7" />
+      <div className="min-h-svh flex items-center justify-center p-6 bg-white">
+        <div className="rounded-2xl border-2 border-red-200 bg-white p-10 shadow-sm text-center space-y-4 max-w-md w-full">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-600 border-2 border-red-200">
+            <AlertCircle className="h-6 w-6" />
           </div>
-          <h2 className="text-2xl font-bold text-ink">Quiz Not Found</h2>
-          <p className="text-sm text-subtle">{error || 'The shared quiz link may be invalid or expired.'}</p>
+          <h2 className="text-xl font-extrabold text-slate-900">Quiz Not Found</h2>
+          <p className="text-xs text-slate-500 font-medium leading-relaxed">{error || 'The shared quiz link may be invalid or expired.'}</p>
           {onBackToApp && (
             <button
               type="button"
               onClick={onBackToApp}
-              className="mt-4 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-indigo-600 transition"
+              className="mt-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-indigo-200 hover:from-indigo-700 hover:to-indigo-800 active:scale-[0.98] transition-all"
             >
               Go to Quiz Forge App
             </button>
@@ -121,7 +121,6 @@ export default function SharedQuizViewer({ docId, onBackToApp }) {
   const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0')
   const seconds = String(elapsed % 60).padStart(2, '0')
 
-  // Calculate score when finished
   const calculateResults = () => {
     let score = 0
     quizData.questions.forEach((q) => {
@@ -140,44 +139,47 @@ export default function SharedQuizViewer({ docId, onBackToApp }) {
     const percent = Math.round((score / total) * 100)
 
     return (
-      <div className="min-h-svh p-6 md:p-10 bg-muted flex items-center justify-center">
-        <div className="w-full max-w-2xl rounded-3xl border border-border bg-surface p-8 shadow-xl text-center space-y-6">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-indigo-50 text-accent">
-            <Trophy className="h-10 w-10 text-amber-500" />
+      <div className="min-h-svh p-6 md:p-10 bg-white flex items-center justify-center">
+        <div className="w-full max-w-2xl rounded-2xl border-2 border-slate-200 bg-white p-8 md:p-10 shadow-sm text-center space-y-6 relative overflow-hidden">
+          {/* Top accent */}
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 via-indigo-500 to-amber-400" />
+
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-500 border-2 border-amber-200 shadow-sm">
+            <Trophy className="h-8 w-8" />
           </div>
 
-          <div className="space-y-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+          <div className="space-y-1.5">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border-2 border-emerald-200">
               <CheckCircle2 className="h-3.5 w-3.5" /> Quiz Completed
             </span>
-            <h1 className="text-3xl font-bold text-ink">{quizData.title}</h1>
-            <p className="text-sm text-subtle">
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{quizData.title}</h1>
+            <p className="text-xs text-slate-500 font-medium">
               Created by {quizData.creatorName} · {isStrict ? 'Strict Exam' : 'Casual Challenge'} Mode
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 rounded-2xl bg-muted p-5 border border-border text-center">
+          <div className="grid grid-cols-3 gap-3 rounded-xl bg-slate-50/80 p-5 border-2 border-slate-200 text-center divide-x-2 divide-slate-200">
             <div>
-              <p className="text-xs text-subtle font-medium">Score</p>
-              <p className="text-3xl font-extrabold text-ink">{score} / {total}</p>
+              <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">Score</p>
+              <p className="mt-1 text-2xl font-extrabold text-slate-900">{score} / {total}</p>
             </div>
             <div>
-              <p className="text-xs text-subtle font-medium">Accuracy</p>
-              <p className="text-3xl font-extrabold text-accent">{percent}%</p>
+              <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">Accuracy</p>
+              <p className="mt-1 text-2xl font-extrabold text-indigo-600">{percent}%</p>
             </div>
             <div>
-              <p className="text-xs text-subtle font-medium">Time Spent</p>
-              <p className="text-3xl font-extrabold text-ink">{minutes}:{seconds}</p>
+              <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">Time</p>
+              <p className="mt-1 text-2xl font-extrabold text-slate-900">{minutes}:{seconds}</p>
             </div>
           </div>
 
           {isStrict && (
-            <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 text-xs text-left">
-              <span className="font-bold text-accent">Strict Anti-Cheat Report: </span>
+            <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50/60 p-4 text-xs text-left">
+              <span className="font-black text-indigo-800">Strict Anti-Cheat Report: </span>
               {violations.length === 0 ? (
-                <span className="text-emerald-700 font-semibold">Clean submission! No violations logged.</span>
+                <span className="text-emerald-700 font-bold">Clean submission! No violations logged.</span>
               ) : (
-                <span className="text-danger font-semibold">{violations.length} violation(s) logged during session.</span>
+                <span className="text-red-700 font-bold">{violations.length} violation(s) logged during session.</span>
               )}
             </div>
           )}
@@ -186,7 +188,7 @@ export default function SharedQuizViewer({ docId, onBackToApp }) {
             <button
               type="button"
               onClick={onBackToApp}
-              className="inline-flex items-center gap-2 rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-white shadow-md hover:bg-indigo-600 transition"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-3 text-xs font-bold text-white shadow-md shadow-indigo-200 hover:from-indigo-700 hover:to-indigo-800 active:scale-[0.98] transition-all"
             >
               <span>Explore AI Quiz Forge</span>
               <Sparkles className="h-4 w-4" />
@@ -198,32 +200,33 @@ export default function SharedQuizViewer({ docId, onBackToApp }) {
   }
 
   return (
-    <div className="min-h-svh bg-muted p-4 md:p-8 flex justify-center">
-      <div className="w-full max-w-4xl space-y-6 text-left">
+    <div className="min-h-svh bg-white p-4 md:p-8 flex justify-center text-left">
+      <div className="w-full max-w-4xl space-y-6">
         {/* Header Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-border bg-surface p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border-2 border-slate-200 bg-white p-6 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-cyan-400 to-indigo-500" />
           <div>
             <div className="flex items-center gap-2">
               {isStrict ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-accent">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700 border-2 border-indigo-200">
                   <ShieldAlert className="h-3.5 w-3.5" /> Exam Mode (Strict)
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border-2 border-emerald-200">
                   <Gamepad2 className="h-3.5 w-3.5" /> Challenge Mode (Casual)
                 </span>
               )}
-              <span className="text-xs text-subtle">By {quizData.creatorName}</span>
+              <span className="text-xs text-slate-500 font-medium">By {quizData.creatorName}</span>
             </div>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink">{quizData.title}</h1>
+            <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900">{quizData.title}</h1>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2 text-sm font-mono font-semibold text-ink shadow-sm">
-              <Timer className="h-4 w-4 text-accent" />
-              {minutes}:{seconds}
+          <div className="flex items-center gap-3">
+            <div className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-3.5 py-2 text-xs font-mono font-bold text-slate-700 shadow-xs">
+              <Timer className="h-4 w-4 text-indigo-600" />
+              <span>{minutes}:{seconds}</span>
             </div>
-            <div className="text-xs font-semibold text-subtle">
+            <div className="text-xs font-bold text-slate-700 bg-slate-100 border-2 border-slate-200 px-2.5 py-1.5 rounded-lg">
               Question {currentIndex + 1} of {quizData.questions.length}
             </div>
           </div>
@@ -231,15 +234,16 @@ export default function SharedQuizViewer({ docId, onBackToApp }) {
 
         {/* Question Section */}
         {currentQ && (
-          <section className="rounded-3xl border border-border bg-surface p-8 shadow-sm space-y-6">
-            <div className="text-xl font-semibold leading-8 text-ink">
+          <section className="rounded-2xl border-2 border-slate-200 bg-white p-8 shadow-sm space-y-6">
+            <div className="text-xl font-bold leading-relaxed text-slate-900">
               <FormattedText>{currentQ.prompt}</FormattedText>
             </div>
 
             <div className="mt-6">
               {currentQ.questionType === 'SHORT_ANSWER' ? (
-                <label className="block space-y-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-subtle">
+                <label className="block space-y-1.5">
+                  <span className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-700">
+                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
                     Your Answer
                   </span>
                   <input
@@ -247,7 +251,7 @@ export default function SharedQuizViewer({ docId, onBackToApp }) {
                     value={answers[currentQ.id] || ''}
                     onChange={(e) => setAnswers({ ...answers, [currentQ.id]: e.target.value })}
                     placeholder="Type your answer here..."
-                    className="w-full rounded-xl border border-border bg-surface px-4 py-3.5 text-sm outline-none ring-accent/20 focus:ring-4 font-medium text-ink"
+                    className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3.5 text-sm font-semibold text-slate-900 outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-500/10 shadow-xs transition-all placeholder:text-slate-400"
                   />
                 </label>
               ) : (
@@ -260,16 +264,23 @@ export default function SharedQuizViewer({ docId, onBackToApp }) {
                         type="button"
                         onClick={() => setAnswers({ ...answers, [currentQ.id]: idx })}
                         className={[
-                          'flex items-center gap-3 rounded-xl border px-4 py-4 text-left text-sm transition',
+                          'flex items-center gap-3.5 rounded-xl border-2 px-4 py-3.5 text-left text-sm transition-all duration-150 shadow-xs',
                           selected
-                            ? 'border-accent bg-accent-soft text-accent font-semibold'
-                            : 'border-border bg-muted text-ink hover:border-slate-300 hover:bg-surface',
+                            ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 ring-2 ring-indigo-500/20 font-semibold'
+                            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/70',
                         ].join(' ')}
                       >
-                        <span className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-xs font-semibold">
+                        <span
+                          className={[
+                            'shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-lg border-2 text-xs font-bold transition-colors',
+                            selected
+                              ? 'border-indigo-600 bg-indigo-600 text-white shadow-xs'
+                              : 'border-slate-200 bg-slate-50 text-slate-700',
+                          ].join(' ')}
+                        >
                           {String.fromCharCode(65 + idx)}
                         </span>
-                        <div className="flex-1">
+                        <div className="flex-1 font-medium">
                           <FormattedText>{opt}</FormattedText>
                         </div>
                       </button>
@@ -282,12 +293,12 @@ export default function SharedQuizViewer({ docId, onBackToApp }) {
         )}
 
         {/* Footer Navigation */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between pt-2">
           <button
             type="button"
             onClick={() => setCurrentIndex((prev) => Math.max(prev - 1, 0))}
             disabled={currentIndex === 0}
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-medium text-ink disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-xs hover:border-indigo-300 hover:text-indigo-700 transition-all disabled:opacity-40"
           >
             <ChevronLeft className="h-4 w-4" />
             Previous
@@ -297,7 +308,7 @@ export default function SharedQuizViewer({ docId, onBackToApp }) {
             <button
               type="button"
               onClick={() => setCurrentIndex((prev) => prev + 1)}
-              className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-indigo-600 transition"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-indigo-200 hover:from-indigo-700 hover:to-indigo-800 active:scale-[0.98] transition-all"
             >
               <span>Next</span>
               <ChevronRight className="h-4 w-4" />
@@ -306,7 +317,7 @@ export default function SharedQuizViewer({ docId, onBackToApp }) {
             <button
               type="button"
               onClick={() => setIsFinished(true)}
-              className="rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-emerald-700 transition"
+              className="rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-200 hover:from-emerald-700 hover:to-emerald-800 active:scale-[0.98] transition-all"
             >
               Submit Quiz
             </button>

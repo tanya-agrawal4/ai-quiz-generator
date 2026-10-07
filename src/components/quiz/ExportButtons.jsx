@@ -34,32 +34,32 @@ export default function ExportButtons({ quiz }) {
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2.5">
         {/* Share Quiz Button */}
         <button
           type="button"
           onClick={() => setShareModalOpen(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-200 transition group"
+          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-indigo-200 hover:from-indigo-700 hover:to-indigo-800 active:scale-[0.98] transition-all group"
         >
-          <Share2 className="h-4 w-4" />
+          <Share2 className="h-3.5 w-3.5" />
           <span>Share Quiz</span>
         </button>
 
         <button
           type="button"
           onClick={handlePdfExport}
-          className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-medium text-ink shadow-sm hover:bg-muted focus:ring-4 focus:ring-accent/10 transition group"
+          className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:border-indigo-300 hover:text-indigo-700 active:scale-[0.98] transition-all group"
         >
           {pdfSuccess ? (
             <>
-              <Check className="h-4 w-4 text-emerald-600" />
-              <span className="text-emerald-700">PDF Exported!</span>
+              <Check className="h-3.5 w-3.5 text-emerald-600" />
+              <span className="text-emerald-700 font-bold">PDF Saved!</span>
             </>
           ) : (
             <>
-              <FileText className="h-4 w-4 text-accent" />
+              <FileText className="h-3.5 w-3.5 text-indigo-600" />
               <span>Download PDF</span>
-              <Download className="h-3.5 w-3.5 opacity-70 group-hover:translate-y-0.5 transition-transform" />
+              <Download className="h-3 w-3 text-slate-400 group-hover:translate-y-0.5 transition-transform" />
             </>
           )}
         </button>
@@ -67,18 +67,18 @@ export default function ExportButtons({ quiz }) {
         <button
           type="button"
           onClick={handleCsvExport}
-          className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-medium text-ink shadow-sm hover:bg-muted focus:ring-4 focus:ring-accent/10 transition group"
+          className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:border-emerald-300 hover:text-emerald-700 active:scale-[0.98] transition-all group"
         >
           {csvSuccess ? (
             <>
-              <Check className="h-4 w-4 text-emerald-600" />
-              <span className="text-emerald-700">CSV Exported!</span>
+              <Check className="h-3.5 w-3.5 text-emerald-600" />
+              <span className="text-emerald-700 font-bold">CSV Saved!</span>
             </>
           ) : (
             <>
-              <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
               <span>Download CSV</span>
-              <Download className="h-3.5 w-3.5 text-subtle group-hover:translate-y-0.5 transition-transform" />
+              <Download className="h-3 w-3 text-slate-400 group-hover:translate-y-0.5 transition-transform" />
             </>
           )}
         </button>

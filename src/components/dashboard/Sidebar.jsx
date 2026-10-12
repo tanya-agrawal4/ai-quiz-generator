@@ -116,6 +116,13 @@ export default function Sidebar() {
                       {displayEmail}
                     </p>
                   )}
+                  {(userProfile?.isDemo || userProfile?.isAnonymous || userProfile?.email?.includes('demo')) && (
+                    <div className="mt-1">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[10px] font-black uppercase text-indigo-700 tracking-wider">
+                        Demo Account
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 

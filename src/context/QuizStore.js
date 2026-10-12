@@ -9,6 +9,7 @@ import {
   signInAnonymously,
   signOut,
 } from '../services/firebase'
+import { getSeedDemoData } from '../data/demoData'
 
 if (pdfjsLib?.GlobalWorkerOptions) {
   pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
@@ -233,11 +234,26 @@ function loadUserData(email) {
   const storedFlashcards = localStorage.getItem(flashcardsKey)
   const storedExplanations = localStorage.getItem(explanationsKey)
 
+  let quizzes = storedQuizzes ? JSON.parse(storedQuizzes) : []
+  let attempts = storedAttempts ? JSON.parse(storedAttempts) : []
+  let flashcards = storedFlashcards ? JSON.parse(storedFlashcards) : []
+  let aiExplanations = storedExplanations ? JSON.parse(storedExplanations) : {}
+
+  // Auto-seed demo account if empty so the user can immediately test all usecases
+  if (email && email.toLowerCase().includes('demo') && quizzes.length === 0) {
+    const seed = getSeedDemoData()
+    quizzes = seed.quizzes
+    attempts = seed.attempts
+    flashcards = seed.flashcards
+    aiExplanations = seed.aiExplanations
+    saveUserData(email, { quizzes, attempts, flashcards, aiExplanations })
+  }
+
   return {
-    quizzes: storedQuizzes ? JSON.parse(storedQuizzes) : [],
-    attempts: storedAttempts ? JSON.parse(storedAttempts) : [],
-    flashcards: storedFlashcards ? JSON.parse(storedFlashcards) : [],
-    aiExplanations: storedExplanations ? JSON.parse(storedExplanations) : {},
+    quizzes,
+    attempts,
+    flashcards,
+    aiExplanations,
   }
 }
 
@@ -390,20 +406,38 @@ export const useQuizStore = create((set, get) => ({
   },
 
   loginAnonymous: async () => {
-    if (!auth) {
-      throw new Error('Firebase Auth is not initialized. Check your VITE_FIREBASE_* environment variables.')
+    let firebaseUser = null
+    // Attempt Firebase signInAnonymously if auth is present, but fail FAST and GRACEFULLY
+    // if the Firebase API key is dead/invalid, network fails, or anonymous sign-in is disabled.
+    if (auth) {
+      try {
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Firebase auth timeout')), 1800)
+        )
+        const credPromise = signInAnonymously(auth)
+        const userCredential = await Promise.race([credPromise, timeoutPromise])
+        firebaseUser = userCredential?.user || null
+      } catch (err) {
+        console.warn(
+          '[Auth] Firebase anonymous sign-in failed/unavailable. Falling back seamlessly to local demo account:',
+          err?.message || err
+        )
+      }
     }
-    const userCredential = await signInAnonymously(auth)
-    const firebaseUser = userCredential.user
-    const anonId = firebaseUser.uid.slice(0, 8)
+
+    const anonId = firebaseUser?.uid ? firebaseUser.uid.slice(0, 8) : uid('demo').slice(0, 8)
+    const demoEmail = 'demo@quizforge.local'
     const userProfile = {
-      name: `Demo User ${anonId}`,
-      email: `demo-${anonId}@quizforge.local`,
-      uid: firebaseUser.uid,
+      name: 'Demo Explorer',
+      email: demoEmail,
+      uid: firebaseUser?.uid || `demo-user-${anonId}`,
       isAnonymous: true,
+      isDemo: true,
     }
+
     localStorage.setItem('quiz_app:current_user', JSON.stringify(userProfile))
-    const userData = loadUserData(userProfile.email)
+    const userData = loadUserData(demoEmail)
+
     set({
       isAuthenticated: true,
       authLoading: false,
@@ -413,11 +447,27 @@ export const useQuizStore = create((set, get) => ({
       attempts: userData.attempts,
       flashcards: userData.flashcards,
       aiExplanations: userData.aiExplanations,
+      reviewAttemptId: userData.attempts[0]?.id || 'attempt-react-1',
     })
+
     if (typeof window !== 'undefined' && window.location.pathname !== '/dashboard') {
       window.history.pushState({}, '', '/dashboard')
     }
     return true
+  },
+
+  resetDemoData: () => {
+    const { userProfile } = get()
+    const email = userProfile?.email || 'demo@quizforge.local'
+    const seed = getSeedDemoData()
+    saveUserData(email, seed)
+    set({
+      quizzes: seed.quizzes,
+      attempts: seed.attempts,
+      flashcards: seed.flashcards,
+      aiExplanations: seed.aiExplanations,
+      reviewAttemptId: seed.attempts[0]?.id || 'attempt-react-1',
+    })
   },
 
   logoutUser: async () => {
@@ -454,7 +504,13 @@ export const useQuizStore = create((set, get) => ({
     }
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        // Handle anonymous users (no email) vs email-based users
+        // If current session is a local Demo Explorer, do not overwrite unless firebase user is real registered user
+        const currentState = useQuizStore.getState()
+        if (currentState.userProfile?.isDemo && firebaseUser.isAnonymous) {
+          set({ authLoading: false })
+          return
+        }
+
         const isAnon = firebaseUser.isAnonymous
         const anonId = firebaseUser.uid.slice(0, 8)
         const userEmail = firebaseUser.email || `demo-${anonId}@quizforge.local`
@@ -466,8 +522,6 @@ export const useQuizStore = create((set, get) => ({
         }
         localStorage.setItem('quiz_app:current_user', JSON.stringify(userProfile))
         const userData = loadUserData(userEmail)
-        const currentState = useQuizStore.getState()
-        // Only update activeView if user is not already on a valid authenticated view
         const shouldNavigate = !currentState.isAuthenticated
         set({
           isAuthenticated: true,
@@ -480,7 +534,25 @@ export const useQuizStore = create((set, get) => ({
           ...(shouldNavigate && window.location.pathname === '/' ? {} : {}),
         })
       } else {
-        // No user signed in
+        // No Firebase user signed in
+        // Check if user is currently logged in as a Demo User (which doesn't require Firebase)
+        const currentState = useQuizStore.getState()
+        const storedUser = localStorage.getItem('quiz_app:current_user')
+        let isStoredDemo = false
+        try {
+          if (storedUser) {
+            const parsed = JSON.parse(storedUser)
+            isStoredDemo = !!(parsed?.isDemo || parsed?.isAnonymous || parsed?.email?.includes('demo'))
+          }
+        } catch {
+          // ignore
+        }
+
+        if (currentState.userProfile?.isDemo || currentState.userProfile?.isAnonymous || isStoredDemo) {
+          set({ authLoading: false })
+          return
+        }
+
         localStorage.removeItem('quiz_app:current_user')
         set({
           isAuthenticated: false,

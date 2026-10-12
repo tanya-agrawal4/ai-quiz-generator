@@ -10,7 +10,7 @@ import {
   YAxis,
   Tooltip,
 } from 'recharts'
-import { BookOpen, Play, Target, TrendingUp } from 'lucide-react'
+import { BookOpen, Play, Target, TrendingUp, Sparkles, RotateCcw } from 'lucide-react'
 import { useQuizStore } from '../../context/QuizStore'
 
 function StatCard({
@@ -49,6 +49,7 @@ export default function Dashboard() {
   const attempts = useQuizStore((state) => state.attempts)
   const startQuiz = useQuizStore((state) => state.startQuiz)
   const openReview = useQuizStore((state) => state.openReview)
+  const resetDemoData = useQuizStore((state) => state.resetDemoData)
   
   const user = useQuizStore((state) => state.userProfile)
 
@@ -61,10 +62,43 @@ export default function Dashboard() {
     return null
   }
 
+  const isDemoUser = !!(user.isDemo || user.isAnonymous || user.email?.toLowerCase().includes('demo'))
   const displayName = user.name || user.email || 'User'
 
   return (
     <div className="space-y-8 p-2 sm:p-4 lg:p-6 text-left">
+      {/* Demo Account Banner */}
+      {isDemoUser && (
+        <div className="rounded-2xl border-2 border-indigo-200 bg-gradient-to-r from-indigo-50/90 via-white to-cyan-50/90 p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="h-10 w-10 shrink-0 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-700 text-white flex items-center justify-center shadow-md shadow-indigo-200">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-extrabold text-slate-900">Demo Account Active · All Use Cases Unlocked</h2>
+                <span className="rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 text-[10px] font-black px-2 py-0.5 uppercase tracking-wide">
+                  Live Preview
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-1 font-medium leading-relaxed">
+                Explore interactive quizzes, score trajectory trends, anti-cheat proctoring logs, flashcard decks, and AI review explanations.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+            <button
+              type="button"
+              onClick={resetDemoData}
+              className="inline-flex items-center gap-1.5 rounded-xl border-2 border-indigo-200 bg-white px-3.5 py-2 text-xs font-bold text-indigo-700 shadow-2xs hover:bg-indigo-50 hover:border-indigo-300 active:scale-[0.98] transition-all cursor-pointer"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>Reset Demo Data</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Dynamic Welcome Message Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>

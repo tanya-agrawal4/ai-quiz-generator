@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import * as pdfjsLib from 'pdfjs-dist'
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import {
   auth,
   onAuthStateChanged,
@@ -11,8 +10,14 @@ import {
 } from '../services/firebase'
 import { getSeedDemoData } from '../data/demoData'
 
+// Configure PDF.js worker using static asset served from public root
 if (pdfjsLib?.GlobalWorkerOptions) {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
+  try {
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    pdfjsLib.GlobalWorkerOptions.workerSrc = origin ? `${origin}/pdf.worker.min.mjs` : '/pdf.worker.min.mjs'
+  } catch (err) {
+    console.warn('[PDF.js] Worker setup warning:', err)
+  }
 }
 
 const SAMPLE_QUIZZES = [
@@ -1012,8 +1017,36 @@ You must strictly adhere to the following rules:
       console.log('[PDF Processing] ArrayBuffer successfully loaded, byte length:', arrayBuffer.byteLength)
 
       console.log('[PDF Processing] Loading PDF document into PDF.js engine...')
-      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
-      const pdf = await loadingTask.promise
+      
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+      const localWorkerUrl = currentOrigin ? `${currentOrigin}/pdf.worker.min.mjs` : '/pdf.worker.min.mjs'
+      const cdnWorkerUrl = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version || '6.0.227'}/build/pdf.worker.min.mjs`
+
+      if (pdfjsLib?.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = localWorkerUrl
+      }
+
+      let pdf
+      try {
+        const loadingTask = pdfjsLib.getDocument({
+          data: arrayBuffer,
+          useWorkerFetch: false,
+          isEvalSupported: false,
+        })
+        pdf = await loadingTask.promise
+      } catch (workerErr) {
+        console.warn('[PDF Processing] Primary worker loading failed, trying fallback CDN worker:', workerErr)
+        if (pdfjsLib?.GlobalWorkerOptions) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = cdnWorkerUrl
+        }
+        const fallbackTask = pdfjsLib.getDocument({
+          data: arrayBuffer,
+          useWorkerFetch: false,
+          isEvalSupported: false,
+        })
+        pdf = await fallbackTask.promise
+      }
+
       console.log('[PDF Processing] Document loaded successfully. Total pages:', pdf.numPages)
 
       let compiledText = ''
